@@ -1,0 +1,27 @@
+/* AdminLayout.css */
+
+/* 默认主题：暗黑 */
+html.dark {
+  background-color: #1a1a1a;
+  color: #fff;
+}
+
+/* 明亮主题 */
+html.light {
+  background-color: #f4f4f4;
+  color: #333;
+}
+
+/* 商务主题 */
+html.business {
+  background-color: #002b36;
+  color: #e1e1e1;
+}
+
+/* 柔和主题 */
+html.soft {
+  background-color: #fafafa;
+  color: #666;
+}
+
+/* 你可以根据不同的主题，调整各个组件的样式 */
