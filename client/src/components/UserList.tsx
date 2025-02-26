@@ -6,7 +6,7 @@ import { Table, Input, Button, Space, message } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import { ColumnType } from 'antd/es/table';
 import { useAuth } from '../context/AuthContext';
-import { api } from '../utils/api';
+import api from '../utils/api';
 
 interface User {
   id: string;

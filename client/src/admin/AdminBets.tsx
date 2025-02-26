@@ -1,6 +1,6 @@
 
 import React,{ useState, useEffect } from "react";
-import { Table, Button, Input, Select, Card } from "@/components/ui";
+import { Table, Button, Input, Select, Card } from "antd";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from "recharts";
 import { getBets, deleteBet, approveBet } from "../api/uresApi";
 import AdminLayout from "./AdminLayout"; // 导入 AdminLayout
