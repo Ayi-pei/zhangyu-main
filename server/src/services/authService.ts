@@ -1,30 +1,64 @@
-import { Request, Response, NextFunction } from 'express';
-import { createClient } from '@supabase/supabase-js';
-//中间件 / 初始化 Supabase 客户端
-const supabase = createClient('https://your-project-id.supabase.co', 'your-anon-key');
+// FILEPATH: d:/ayi/zhangyu-main/server/src/services/authService.ts
 
-// 认证检查中间件
-export const checkAuthorization = async (req: Request, res: Response, next: NextFunction) => {
-  const token = req.headers['authorization'];
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import { User } from '../models/User';
+import { UserService } from './userService';
 
-  if (!token) {
-    return res.status(403).json({ success: false, message: '未授权访问' });
+const userService = new UserService();
+
+export const authenticateUser = async (email: string, password: string): Promise<User | null> => {
+  const user = await userService.getUserByEmail(email);
+  if (!user) {
+    return null;
   }
 
+  const isPasswordValid = await bcrypt.compare(password, user.password);
+  if (!isPasswordValid) {
+    return null;
+  }
+
+  return user;
+};
+
+export const generateToken = (user: User): string => {
+  return jwt.sign(
+    { id: user.id, email: user.email, role: user.role },
+    process.env.JWT_SECRET as string,
+    { expiresIn: '1d' }
+  );
+};
+
+export const hashPassword = async (password: string): Promise<string> => {
+  const salt = await bcrypt.genSalt(10);
+  return bcrypt.hash(password, salt);
+};
+
+export const verifyToken = (token: string): User | null => {
   try {
-    // 使用 Supabase 验证 token
-    const { data, error } = await supabase.auth.getUser(token as string);
-
-    if (error || !data) {
-      return res.status(403).json({ success: false, message: '无效的授权令牌' });
-    }
-
-    // 确保 data 中有 user 属性，并从中提取 id 和 username
-    const user = data.user; // 获取 user 对象
-    req.user = { id: user.id, username: user.user_metadata.username };
-
-    next();
+    return jwt.verify(token, process.env.JWT_SECRET as string) as User;
   } catch (error) {
-    return res.status(500).json({ success: false, message: '授权验证失败' });
+    return null;
   }
 };
+
+export const refreshToken = (user: User): string => {
+  return generateToken(user);
+};
+
+export class UserService {
+  async updateUserStats(userId: number, creditScore: number, memberLevel: string): Promise<User> {
+    const user = await User.findByPk(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+    user.creditScore = creditScore;
+    user.memberLevel = memberLevel;
+    await user.save();
+    return user;
+  }
+
+  async getUserById(userId: number): Promise<User | null> {
+    return User.findByPk(userId);
+  }
+}

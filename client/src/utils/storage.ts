@@ -1,62 +1,109 @@
-// src/utils/storage.ts
+// FILEPATH: d:/ayi/zhangyu-main/client/src/utils/storage.ts
 
-/**
- * storage 工具模块，用于封装 localStorage 操作。
- */
-export const storage = {
-    /**
-     * 从 localStorage 中读取指定 key 的值，自动进行 JSON 解析
-     * @param key 存储的 key
-     * @returns 如果存在，则返回解析后的数据，否则返回 null
-     */
-    get<T>(key: string): T | null {
-      const value = localStorage.getItem(key);
-      if (!value) return null;
-      try {
-        return JSON.parse(value) as T;
-      } catch (e) {
-        console.error(`Error parsing localStorage item "${key}":`, e);
-        return value as any;
-      }
-    },
-  
-    /**
-     * 将数据保存到 localStorage 中，数据将以 JSON 字符串格式存储
-     * @param key 存储的 key
-     * @param data 要保存的数据
-     */
-    set(key: string, data: any): void {
-      try {
-        localStorage.setItem(key, JSON.stringify(data));
-      } catch (e) {
-        console.error(`Error saving localStorage item "${key}":`, e);
-      }
-    },
-  
-    /**
-     * 从 localStorage 中删除指定 key 的数据
-     * @param key 存储的 key
-     */
-    remove(key: string): void {
-      localStorage.removeItem(key);
-    },
-  
-    /**
-     * 清空所有 localStorage 数据
-     */
-    clear(): void {
-      localStorage.clear();
-    },
+// 定义可以存储的键的类型
+type StorageKey = 'token' | 'user' | 'gameState' | 'settings';
+
+// 定义每个键对应的值的类型
+interface StorageSchema {
+  token: string;
+  user: {
+    id: string;
+    username: string;
+    balance: number;
   };
-  //使用示例
-  // 存储数据
-storage.set('playerBalance', 1000);
+  gameState: {
+    currentBet: number;
+    lastResult: 'win' | 'lose' | null;
+  };
+  settings: {
+    theme: 'light' | 'dark';
+    soundEnabled: boolean;
+  };
+}
 
-// 读取数据
-const balance = storage.get<number>('playerBalance');
+class Storage {
+  private prefix: string;
 
-// 删除数据
-storage.remove('playerBalance');
+  constructor(prefix: string = 'app_') {
+    this.prefix = prefix;
+  }
 
-// 清空所有数据
-storage.clear();
+  private getKey(key: StorageKey): string {
+    return `${this.prefix}${key}`;
+  }
+
+  get<K extends StorageKey>(key: K): StorageSchema[K] | null {
+    const item = localStorage.getItem(this.getKey(key));
+    if (item === null) {
+      return null;
+    }
+    try {
+      return JSON.parse(item) as StorageSchema[K];
+    } catch {
+      console.error(`Failed to parse stored item with key: ${key}`);
+      return null;
+    }
+  }
+
+  set<K extends StorageKey>(key: K, value: StorageSchema[K]): void {
+    try {
+      localStorage.setItem(this.getKey(key), JSON.stringify(value));
+    } catch (e) {
+      console.error(`Failed to store item with key: ${key}`, e);
+    }
+  }
+
+  remove(key: StorageKey): void {
+    localStorage.removeItem(this.getKey(key));
+  }
+
+  clear(): void {
+    Object.keys(localStorage)
+      .filter(key => key.startsWith(this.prefix))
+      .forEach(key => localStorage.removeItem(key));
+  }
+
+  // 辅助方法
+  getToken(): string | null {
+    return this.get('token');
+  }
+
+  setToken(token: string): void {
+    this.set('token', token);
+  }
+
+  getUser(): StorageSchema['user'] | null {
+    return this.get('user');
+  }
+
+  setUser(user: StorageSchema['user']): void {
+    this.set('user', user);
+  }
+
+  updateUserBalance(newBalance: number): void {
+    const user = this.getUser();
+    if (user) {
+      this.setUser({ ...user, balance: newBalance });
+    }
+  }
+
+  getGameState(): StorageSchema['gameState'] | null {
+    return this.get('gameState');
+  }
+
+  setGameState(gameState: StorageSchema['gameState']): void {
+    this.set('gameState', gameState);
+  }
+
+  getSettings(): StorageSchema['settings'] | null {
+    return this.get('settings');
+  }
+
+  setSettings(settings: StorageSchema['settings']): void {
+    this.set('settings', settings);
+  }
+}
+
+// 创建并导出一个 Storage 实例
+const storage = new Storage();
+export default storage;

@@ -1,49 +1,78 @@
-import React, { useState, useCallback } from "react";
-import * as api from "../api/uresApi";
+// FILEPATH: d:/ayi/zhangyu-main/client/src/components/RechargeForm.tsx
+
+import React, { useState } from 'react';
+import { Form, InputNumber, Button, message } from 'antd';
+import styled from 'styled-components';
+import axios from 'axios';
+
+const StyledForm = styled(Form)`
+  max-width: 300px;
+  margin: 0 auto;
+`;
+
+const StyledFormItem = styled(Form.Item)`
+  margin-bottom: 24px;
+`;
+
+interface RechargeFormValues {
+  amount: number;
+}
 
 const RechargeForm: React.FC = () => {
-  const [amount, setAmount] = useState<number>(0);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (amount <= 0) {
-      setError("请输入有效的充值金额");
-      return;
-    }
-    setIsLoading(true);
-    setError(null);
+  const onFinish = async (values: RechargeFormValues) => {
+    setLoading(true);
+
     try {
-      // 使用新的 recharge 方法
-      const res = await api.recharge("当前用户ID", amount);
-      alert(`充值成功！金额: ${amount}`);
-    } catch (err) {
-      setError("充值失败，请稍后再试");
+      // 这里使用您的后端 API 端点
+      const response = await axios.post('/api/recharge', {
+        amount: values.amount
+      });
+
+      if (response.data.success) {
+        message.success('Recharge request submitted successfully.');
+        form.resetFields();
+      } else {
+        message.error(response.data.message || 'Recharge request failed. Please try again.');
+      }
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        message.error(error.response?.data?.message || 'Recharge request failed. Please try again.');
+      } else {
+        message.error('An unexpected error occurred. Please try again.');
+      }
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  }, [amount]);
+  };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h2>充值积分</h2>
-      <label htmlFor="amount">充值金额：</label>
-      <input 
-        id="amount"
-        type="number" 
-        value={amount} 
-        onChange={(e) => setAmount(Number(e.target.value))}
-        min="0"
-        step="1"
-        required
-        placeholder="请输入充值金额"
-      />
-      {error && <p className="error-message">{error}</p>}
-      <button type="submit" disabled={isLoading}>
-        {isLoading ? '处理中...' : '提交充值订单'}
-      </button>
-    </form>
+    <StyledForm
+      form={form}
+      name="recharge"
+      onFinish={onFinish}
+    >
+      <StyledFormItem
+        name="amount"
+        rules={[
+          { required: true, message: 'Please input the recharge amount!' },
+          { type: 'number', message: 'Please enter a valid number!' }
+        ]}
+      >
+        <InputNumber
+          placeholder="Recharge Amount"
+          style={{ width: '100%' }}
+        />
+      </StyledFormItem>
+
+      <Form.Item>
+        <Button type="primary" htmlType="submit" loading={loading} style={{ width: '100%' }}>
+          Submit Recharge Request
+        </Button>
+      </Form.Item>
+    </StyledForm>
   );
 };
 

@@ -1,146 +1,164 @@
-import React, { useState, useEffect } from 'react';
+// FILEPATH: d:/ayi/zhangyu-main/client/src/components/SupportDialog.tsx
+
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Send, MessageSquare, ArrowLeft } from 'lucide-react';
-import './SupportDialog.css';
+import { Button, Input, Avatar, Tooltip, message } from 'antd';
+import { SendOutlined, UserOutlined, CustomerServiceOutlined } from '@ant-design/icons';
+import styled from 'styled-components';
+import { useTheme } from '../context/ThemeContext';
+
+const DialogContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: ${props => props.theme === 'dark' ? '#1f1f1f' : '#ffffff'};
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+  @media (max-width: 768px) {
+    padding: 10px;
+  }
+`;
+
+const DialogHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+`;
+
+const MessagesContainer = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  border: 1px solid ${props => props.theme === 'dark' ? '#434343' : '#d9d9d9'};
+  border-radius: 4px;
+  margin-bottom: 20px;
+`;
+
+const MessageBubble = styled.div`
+  max-width: 70%;
+  padding: 10px;
+  border-radius: 18px;
+  margin-bottom: 10px;
+  word-wrap: break-word;
+`;
+
+const UserMessage = styled(MessageBubble)`
+  background-color: #1890ff;
+  color: white;
+  align-self: flex-end;
+  margin-left: auto;
+`;
+
+const SupportMessage = styled(MessageBubble)`
+  background-color: ${props => props.theme === 'dark' ? '#424242' : '#f0f0f0'};
+  color: ${props => props.theme === 'dark' ? '#ffffff' : '#000000'};
+`;
+
+const InputContainer = styled.div`
+  display: flex;
+  align-items: center;
+`;
+
+const StyledInput = styled(Input)`
+  flex: 1;
+  margin-right: 10px;
+`;
 
 interface SupportDialogProps {
   onClose: () => void;
 }
 
 interface Message {
+  id: number;
   sender: 'user' | 'support';
   text: string;
+  timestamp: Date;
 }
 
 const SupportDialog: React.FC<SupportDialogProps> = ({ onClose }) => {
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [messageText, setMessageText] = useState('');
-  const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
+  const [inputText, setInputText] = useState('');
+  const messagesEndRef = useRef<null | HTMLDivElement>(null);
+  const { themeMode } = useTheme();
 
   useEffect(() => {
-    // 获取二维码 URL
-    fetch('/api/qrcode')
-      .then(response => response.json())
-      .then(data => setQrCodeUrl(data.qrCodeUrl))
-      .catch(error => console.error('Error fetching QR code:', error));
-  }, []);
+    scrollToBottom();
+  }, [messages]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   const handleSendMessage = () => {
-    if (messageText.trim()) {
-      setMessages(prev => [...prev, { sender: 'user', text: messageText.trim() }]);
-      setMessageText('');
+    if (inputText.trim()) {
+      const newMessage: Message = {
+        id: Date.now(),
+        sender: 'user',
+        text: inputText.trim(),
+        timestamp: new Date(),
+      };
+      setMessages(prevMessages => [...prevMessages, newMessage]);
+      setInputText('');
+      simulateSupportResponse();
     }
   };
 
-  const handleSimulateResponse = () => {
-    setMessages(prev => [
-      ...prev,
-      { sender: 'support', text: '안녕하세요, 무엇을 도와드릴까요?' }
-    ]);
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
+  const simulateSupportResponse = () => {
+    setTimeout(() => {
+      const supportMessage: Message = {
+        id: Date.now(),
+        sender: 'support',
+        text: '感谢您的咨询。我们的客服人员将尽快回复您的问题。',
+        timestamp: new Date(),
+      };
+      setMessages(prevMessages => [...prevMessages, supportMessage]);
+    }, 1000);
   };
 
   return (
-    <div className="support-dialog-container">
-      <button
-        type="button"
-        onClick={() => navigate('/profile')}
-        className="back-button"
-      >
-        <ArrowLeft className="w-5 h-5" />
-        <span>返回个人中心</span>
-      </button>
-
-      <div className="support-dialog-card">
-        <div className="dialog-header">
-          <h3 className="dialog-title">联系客服</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="close-button"
-            aria-label="关闭对话"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="messages-container">
-          {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-gray-400">
-              <MessageSquare className="w-12 h-12 mb-2" />
-              <p>暂无消息</p>
-            </div>
-          ) : (
-            messages.map((message, index) => (
-              <div
-                key={index}
-                className={`message ${message.sender === 'user' ? 'user-message' : 'support-message'}`}
-              >
-                {message.text}
-              </div>
-            ))
-          )}
-        </div>
-
-        <div className="input-container">
-          <input
-            type="text"
-            value={messageText}
-            onChange={(e) => setMessageText(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="输入消息..."
-            className="message-input"
-          />
-          <div className="action-buttons">
-            <button
-              type="button"
-              onClick={handleSendMessage}
-              className="action-button send-button"
-              disabled={!messageText.trim()}
-              aria-label="发送消息"
-            >
-              <Send className="w-5 h-5" />
-            </button>
-
-            <button
-              type="button"
-              onClick={handleSimulateResponse}
-              className="action-button simulate-button"
-            >
-              获取消息
-            </button>
+    <DialogContainer theme={themeMode}>
+      <DialogHeader>
+        <h2>客户支持</h2>
+        <Button onClick={onClose}>关闭</Button>
+      </DialogHeader>
+      <MessagesContainer theme={themeMode}>
+        {messages.map((message) => (
+          <div key={message.id} style={{ display: 'flex', justifyContent: message.sender === 'user' ? 'flex-end' : 'flex-start' }}>
+            {message.sender === 'support' && (
+              <Avatar icon={<CustomerServiceOutlined />} style={{ marginRight: '10px' }} />
+            )}
+            <Tooltip title={message.timestamp.toLocaleString()}>
+              {message.sender === 'user' ? (
+                <UserMessage>{message.text}</UserMessage>
+              ) : (
+                <SupportMessage theme={themeMode}>{message.text}</SupportMessage>
+              )}
+            </Tooltip>
+            {message.sender === 'user' && (
+              <Avatar icon={<UserOutlined />} style={{ marginLeft: '10px' }} />
+            )}
           </div>
-        </div>
-
-        {/* 社交媒体链接 */}
-        <div className="social-links">
-          <h4 className="text-lg font-bold mt-6">联系我们</h4>
-          <div className="flex justify-center gap-4 mt-2">
-            <a href="https://www.example.com/facebook" target="_blank" rel="noopener noreferrer" className="social-link">
-              Facebook
-            </a>
-            <a href="https://www.example.com/whatsapp" target="_blank" rel="noopener noreferrer" className="social-link">
-              WhatsApp
-            </a>
-          </div>
-        </div>
-
-        {/* 显示二维码 */}
-        {qrCodeUrl && (
-          <div className="qr-code-container mt-4">
-            <h4 className="text-lg font-bold">扫描二维码联系客服</h4>
-            <img src={qrCodeUrl} alt="QR Code" className="qr-code-image" />
-          </div>
-        )}
-      </div>
-    </div>
+        ))}
+        <div ref={messagesEndRef} />
+      </MessagesContainer>
+      <InputContainer>
+        <StyledInput
+          value={inputText}
+          onChange={(e) => setInputText(e.target.value)}
+          onPressEnter={handleSendMessage}
+          placeholder="输入您的问题..."
+        />
+        <Button type="primary" icon={<SendOutlined />} onClick={handleSendMessage}>
+          发送
+        </Button>
+      </InputContainer>
+    </DialogContainer>
   );
 };
 

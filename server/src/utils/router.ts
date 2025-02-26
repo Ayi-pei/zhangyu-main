@@ -1,11 +1,26 @@
-import express from 'express';
-import { checkAuthorization, saveCardInfo, getExchangeHistory } from '../services/services';
-import { deductPoints, addExchangeRecord } from '../services/services';
+// FILEPATH: d:/ayi/zhangyu-main/server/src/utils/router.ts
+
+import express, { Request, Response, NextFunction } from 'express';
+import { checkAuthorization } from '../middleware/auth';
+import { saveCardInfo, getExchangeHistory, deductPoints, addExchangeRecord } from '../services/services';
 
 const router = express.Router();
 
+// 定义请求体的接口
+interface BindCardRequest {
+  cardNumber: string;
+  bank: string;
+  cardHolder: string;
+  exchangeCode: string;
+}
+
+interface ExchangeRequest {
+  amount: number;
+  verificationCode: string;
+}
+
 // 绑定银行卡接口
-router.post('/bind-card', checkAuthorization, async (req, res) => {
+router.post('/bind-card', checkAuthorization, async (req: Request<{}, {}, BindCardRequest>, res: Response, next: NextFunction) => {
   const { cardNumber, bank, cardHolder, exchangeCode } = req.body;
   if (!cardNumber || !bank || !cardHolder || !exchangeCode) {
     return res.status(400).json({ success: false, message: '缺少必要的参数' });
@@ -13,22 +28,22 @@ router.post('/bind-card', checkAuthorization, async (req, res) => {
 
   try {
     // 保存银行卡信息
-    await saveCardInfo(req.user.id, cardNumber, bank, cardHolder, exchangeCode);
+    await saveCardInfo(req.user!.id, cardNumber, bank, cardHolder, exchangeCode);
     res.json({ success: true, message: '银行卡绑定成功' });
   } catch (error) {
-    res.status(500).json({ success: false, message: '绑定失败，请稍后再试' });
+    next(error);
   }
 });
 
 // 积分兑换接口
-router.post('/exchange', checkAuthorization, async (req, res) => {
+router.post('/exchange', checkAuthorization, async (req: Request<{}, {}, ExchangeRequest>, res: Response, next: NextFunction) => {
   const { amount, verificationCode } = req.body;
 
   if (isNaN(amount) || amount <= 0) {
     return res.status(400).json({ success: false, message: '请输入有效的兑换积分数量' });
   }
 
-  const user = req.user; // 获取当前用户信息
+  const user = req.user!;
   if (user.points < amount) {
     return res.status(400).json({ success: false, message: '积分不足' });
   }
@@ -40,17 +55,17 @@ router.post('/exchange', checkAuthorization, async (req, res) => {
 
     res.json({ success: true, message: '兑换成功' });
   } catch (error) {
-    res.status(500).json({ success: false, message: '兑换失败，请稍后再试' });
+    next(error);
   }
 });
 
 // 查看积分历史接口
-router.get('/exchange-history', checkAuthorization, async (req, res) => {
+router.get('/exchange-history', checkAuthorization, async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const history = await getExchangeHistory(req.user.id);
+    const history = await getExchangeHistory(req.user!.id);
     res.json({ success: true, history });
   } catch (error) {
-    res.status(500).json({ success: false, message: '获取历史记录失败' });
+    next(error);
   }
 });
 

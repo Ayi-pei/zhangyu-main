@@ -1,83 +1,84 @@
-// src/utils/api.ts
+// FILEPATH: d:/ayi/zhangyu-main/client/src/utils/api.ts
 
-// 定义后端 API 的基础 URL
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
+import axios from 'axios';
 
-/**
- * 通用 API 请求函数
- * @param endpoint - API 端点路径，例如 '/login'
- * @param method - HTTP 方法，默认 'GET'
- * @param data - 可选的请求体数据（会被 JSON.stringify 处理）
- * @returns Promise resolving to JSON 响应数据
- */
-export async function request(endpoint: string, method: string = 'GET', data?: any): Promise<any> {
-  const url = `${API_BASE_URL}${endpoint}`;
-  const options: RequestInit = {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      // 如有需要，可在此处添加 Authorization 头部
-    },
-  };
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
-  if (data) {
-    options.body = JSON.stringify(data);
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// 请求拦截器，用于添加认证 token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// 响应拦截器，用于处理常见错误
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response) {
+      switch (error.response.status) {
+        case 401:
+          // 未认证，可以在这里处理登出逻辑
+          localStorage.removeItem('token');
+          window.location.href = '/login';
+          break;
+        case 403:
+          console.error('Access forbidden');
+          break;
+        case 404:
+          console.error('Resource not found');
+          break;
+        case 500:
+          console.error('Internal server error');
+          break;
+        default:
+          console.error('An error occurred');
+      }
+    } else if (error.request) {
+      console.error('No response received');
+    } else {
+      console.error('Error setting up request');
+    }
+    return Promise.reject(error);
   }
+);
 
-  const response = await fetch(url, options);
-  if (!response.ok) {
-    // 尝试获取错误信息
-    const errorData = await response.json();
-    throw new Error(errorData.message || 'API request failed');
-  }
-  return response.json();
-}
+export const authAPI = {
+  login: (username: string, password: string) => 
+    api.post('/auth/login', { username, password }),
+  register: (username: string, password: string) => 
+    api.post('/auth/register', { username, password }),
+  logout: () => api.post('/auth/logout'),
+};
 
-/**
- * 登录接口
- * @param email - 用户邮箱
- * @param password - 用户密码
- * @returns Promise resolving to登录结果
- */
-export async function login(email: string, password: string): Promise<any> {
-  return request('/login', 'POST', { email, password });
-}
+export const userAPI = {
+  getProfile: () => api.get('/users/profile'),
+  updateProfile: (data: any) => api.put('/users/profile', data),
+};
 
-/**
- * 充值接口（增加用户积分）
- * @param userId - 用户 ID
- * @param amount - 充值金额
- * @returns Promise resolving to更新结果
- */
-export async function recharge(userId: string, amount: number): Promise<any> {
-  return request('/users/recharge', 'POST', { userId, amount });
-}
+export const betAPI = {
+  placeBet: (direction: 'left' | 'right', steps: number) => 
+    api.post('/bets/place', { direction, steps }),
+  getBetHistory: (page: number, pageSize: number) => 
+    api.get('/bets/history', { params: { page, pageSize } }),
+};
 
-/**
- * 积分兑换接口（减少用户积分）
- * @param userId - 用户 ID
- * @param amount - 兑换金额
- * @returns Promise resolving to更新结果
- */
-export async function exchange(userId: string, amount: number): Promise<any> {
-  return request('/users/exchange', 'POST', { userId, amount });
-}
+export const gameAPI = {
+  getGameState: () => api.get('/game/state'),
+  startGame: () => api.post('/game/start'),
+  endGame: () => api.post('/game/end'),
+};
 
-/**
- * 获取用户信息
- * @param userId - 用户 ID
- * @returns Promise resolving to用户数据
- */
-export async function getUser(userId: string): Promise<any> {
-  return request(`/users/${userId}`, 'GET');
-}
-
-/**
- * 更新用户信息
- * @param userId - 用户 ID
- * @param updateData - 要更新的数据对象
- * @returns Promise resolving to更新后的用户数据
- */
-export async function updateUser(userId: string, updateData: any): Promise<any> {
-  return request(`/users/${userId}`, 'PUT', updateData);
-}
+export default api;

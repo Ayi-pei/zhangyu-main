@@ -1,40 +1,25 @@
-// src/services/services.ts
-import { saveCardInfo } from './cardServices';
-import { deductPoints, getUserPoints } from './pointsServices';
-import { addExchangeRecord, getExchangeHistory } from './exchangeServices';
+// FILEPATH: d:/ayi/zhangyu-main/server/src/server.ts
 
-// 保存银行卡信息
-export const bindCard = async (userId: number, cardNumber: string, bank: string, cardHolder: string, exchangeCode: string) => {
-  try {
-    await saveCardInfo(userId, cardNumber, bank, cardHolder, exchangeCode);
-    return { success: true, message: '银行卡绑定成功' };
-  } catch (error) {
-    throw new Error('绑定失败，请稍后再试');
-  }
-};
+import express from 'express';
+import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+import cors from 'cors';
+import authRoutes from './routes/auth';
 
-// 扣除积分并记录兑换
-export const exchangePoints = async (userId: number, amount: number, verificationCode: string) => {
-  const userPoints = await getUserPoints(userId); // 获取用户积分
-  if (userPoints < amount) {
-    throw new Error('积分不足');
-  }
+dotenv.config();
 
-  try {
-    await deductPoints(userId, amount); // 扣除积分
-    await addExchangeRecord(userId, amount, verificationCode); // 记录兑换
-    return { success: true, message: '兑换成功' };
-  } catch (error) {
-    throw new Error('兑换失败，请稍后再试');
-  }
-};
+const app = express();
 
-// 获取兑换历史
-export const getExchangeHistory = async (userId: number) => {
-  try {
-    const history = await getExchangeHistory(userId);
-    return { success: true, history };
-  } catch (error) {
-    throw new Error('获取历史记录失败');
-  }
-};
+app.use(cors());
+app.use(express.json());
+
+// 连接到 MongoDB
+mongoose.connect(process.env.MONGODB_URI as string)
+  .then(() => console.log('Connected to MongoDB'))
+  .catch((err) => console.error('Could not connect to MongoDB', err));
+
+// 路由
+app.use('/api/auth', authRoutes);
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

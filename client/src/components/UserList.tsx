@@ -1,53 +1,126 @@
-import React,{ useEffect, useState } from 'react';
-import { supabase } from './supabaseClient';
+// FILEPATH: d:/ayi/zhangyu-main/client/src/components/UserList.tsx
 
-function UserList() {
-  const [users, setUsers] = useState<any[]>([]);
+import React, { useState } from 'react';
+import { useQuery } from 'react-query';
+import { Table, Input, Button, Space, message } from 'antd';
+import { SearchOutlined } from '@ant-design/icons';
+import { ColumnType } from 'antd/es/table';
+import { useAuth } from '../context/AuthContext';
+import { api } from '../utils/api';
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      const { data, error } = await supabase
-        .from('users')  // 订阅的是 users 表
-        .select('*');
+interface User {
+  id: string;
+  username: string;
+  email: string;
+  balance: number;
+  createdAt: string;
+}
 
-      if (error) {
-        console.error('Error fetching users:', error);
-      } else {
-        setUsers(data);
-      }
-    };
+const UserList: React.FC = () => {
+  const { user: currentUser } = useAuth();
+  const [searchText, setSearchText] = useState('');
 
-    // 初次加载用户数据
-    fetchUsers();
+  const { data: users, isLoading, error } = useQuery<User[], Error>(
+    'users',
+    async () => {
+      const response = await api.get('/users');
+      return response.data;
+    }
+  );
 
-    // 设置实时订阅
-    const subscription = supabase
-      .from('users')  // 监听 users 表的变化
-      .on('*', payload => {
-        console.log('Change received!', payload);
-        fetchUsers();  // 当数据发生变化时重新拉取数据
-      })
-      .subscribe();
+  if (error) {
+    message.error('Failed to load users');
+  }
 
-    return () => {
-      supabase.removeSubscription(subscription);  // 清理订阅
-    };
-  }, []);
+  const handleSearch = (selectedKeys: string[], confirm: () => void) => {
+    confirm();
+    setSearchText(selectedKeys[0]);
+  };
+
+  const handleReset = (clearFilters: () => void) => {
+    clearFilters();
+    setSearchText('');
+  };
+
+  const getColumnSearchProps = (dataIndex: keyof User): ColumnType<User> => ({
+    filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+      <div style={{ padding: 8 }}>
+        <Input
+          placeholder={`Search ${dataIndex}`}
+          value={selectedKeys[0]}
+          onChange={(e) => setSelectedKeys(e.target.value ? [e.target.value] : [])}
+          onPressEnter={() => handleSearch(selectedKeys as string[], confirm)}
+          style={{ width: 188, marginBottom: 8, display: 'block' }}
+        />
+        <Space>
+          <Button
+            type="primary"
+            onClick={() => handleSearch(selectedKeys as string[], confirm)}
+            icon={<SearchOutlined />}
+            size="small"
+            style={{ width: 90 }}
+          >
+            Search
+          </Button>
+          <Button onClick={() => handleReset(clearFilters!)} size="small" style={{ width: 90 }}>
+            Reset
+          </Button>
+        </Space>
+      </div>
+    ),
+    filterIcon: (filtered: boolean) => (
+      <SearchOutlined style={{ color: filtered ? '#1890ff' : undefined }} />
+    ),
+    onFilter: (value, record) =>
+      record[dataIndex]
+        .toString()
+        .toLowerCase()
+        .includes((value as string).toLowerCase()),
+    render: (text) => text,
+  });
+
+  const columns: ColumnType<User>[] = [
+    {
+      title: 'Username',
+      dataIndex: 'username',
+      key: 'username',
+      ...getColumnSearchProps('username'),
+    },
+    {
+      title: 'Email',
+      dataIndex: 'email',
+      key: 'email',
+      ...getColumnSearchProps('email'),
+    },
+    {
+      title: 'Balance',
+      dataIndex: 'balance',
+      key: 'balance',
+      sorter: (a, b) => a.balance - b.balance,
+      render: (balance) => `$${balance.toFixed(2)}`,
+    },
+    {
+      title: 'Created At',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      sorter: (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      render: (date) => new Date(date).toLocaleDateString(),
+    },
+  ];
 
   return (
     <div>
       <h1>User List</h1>
-      {users.length > 0 ? (
-        <ul>
-          {users.map((user, index) => (
-            <li key={index}>{user.username}</li>  // 假设 user 有 username 字段
-          ))}
-        </ul>
-      ) : (
-        <p>No users found.</p>
-      )}
+      <Table<User>
+        columns={columns}
+        dataSource={users}
+        loading={isLoading}
+        rowKey="id"
+        pagination={{ pageSize: 10 }}
+        scroll={{ x: true }}
+      />
     </div>
   );
-}
+};
 
 export default UserList;

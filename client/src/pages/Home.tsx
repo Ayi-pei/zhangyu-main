@@ -1,7 +1,10 @@
-import React from 'react';
-import { useState, useEffect, useRef } from 'react';
+// FILEPATH: d:/ayi/zhangyu-main/client/src/pages/Home.tsx
+
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Heart } from 'lucide-react';
+import axios from 'axios';
+import { message } from 'antd';
 import BottomNav from '../components/BottomNav';
 import '../styles/carousel.css';
 
@@ -25,36 +28,46 @@ const carouselImages = [
 
 function Home() {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const trackRef = useRef<HTMLDivElement>(null);
+  const [userBalance, setUserBalance] = useState(0);
   const navigate = useNavigate();
 
   useEffect(() => {
+    const fetchUserBalance = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get('http://localhost:5000/api/user/balance', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setUserBalance(response.data.balance);
+      } catch (error) {
+        console.error('Error fetching user balance:', error);
+        message.error('Failed to fetch user balance');
+      }
+    };
+
+    fetchUserBalance();
+
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % carouselImages.length);
     }, 5000);
+
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    if (trackRef.current) {
-      trackRef.current.style.setProperty('--translate-x', `-${currentSlide * 100}%`);
-    }
-  }, [currentSlide]);
-
-  // 处理游戏模式选择：同时传递 mode 和默认 gameId 参数
   const handleModeSelect = (mode: GameMode) => {
-    navigate(`/play/${mode.path}/defaultGameId`, {
+    navigate(`/play/${mode.path}`, {
       state: {
         modeName: mode.name,
         duration: mode.duration
       }
     });
   };
+
   return (
     <div className="min-h-screen bg-gradient-to-r from-[#8c52ff] to-[rgb(253,134,59)] pb-16">
       {/* 轮播图 */}
       <div className="carousel-container">
-        <div className="carousel-track" ref={trackRef}>
+        <div className="carousel-track" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
           {carouselImages.map((img, index) => (
             <img key={index} src={img} alt={`Slide ${index + 1}`} className="carousel-slide" />
           ))}
@@ -69,14 +82,15 @@ function Home() {
            <Heart className="w-10 h-10 text-red-500" />
            만남
          </h1>
+         <p className="text-white mt-2">Balance: {userBalance}</p>
         </div>
 
         {/* 游戏模式选择 */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-12">
           {gameModes.map((mode) => (
-            <button type="button"
+            <button
               key={mode.name}
-             onClick={() => handleModeSelect(mode)}
+              onClick={() => handleModeSelect(mode)}
               className="p-6 rounded-lg bg-blue-500 text-white text-center transition-transform duration-300 ease-in-out hover:bg-blue-600 hover:scale-105 hover:shadow-lg"
             >
               <div className="flex flex-col items-center gap-2">
@@ -93,4 +107,4 @@ function Home() {
   );
 }
 
-export default Home
+export default Home;

@@ -1,20 +1,129 @@
-import { Pool } from 'pg';  // 引入 PostgreSQL 的 Pool
-import { Sequelize } from 'sequelize';  // 确保导入 Sequelize 类
+// FILEPATH: d:/ayi/zhangyu-main/server/src/utils/database.ts
 
-// 创建数据库连接池
-export const pool = new Pool({
-  user: 'dbuser',       // 替换为你的数据库用户名
-  host: 'localhost',    // 数据库主机
-  database: 'your_database',  // 数据库名
-  password: 'password', // 数据库密码
-  port: 5432,           // 数据库端口
-});
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
 
-// 你可以继续导出 sequelize 连接
-export const sequelize = new Sequelize({
-  dialect: 'postgres',   // 指定数据库类型为 postgres
-  host: 'localhost',     // 数据库主机地址
-  username: 'yourUsername', // 数据库用户名
-  password: 'yourPassword', // 数据库密码
-  database: 'yourDatabase', // 数据库名
-});
+dotenv.config();
+
+// 定义环境变量的接口
+interface Env {
+  SUPABASE_URL: string;
+  SUPABASE_ANON_KEY: string;
+}
+
+// 检查环境变量
+const checkEnv = (): Env => {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_ANON_KEY;
+
+  if (!url || !key) {
+    throw new Error('Missing Supabase environment variables');
+  }
+
+  return { SUPABASE_URL: url, SUPABASE_ANON_KEY: key };
+};
+
+// 创建 Supabase 客户端
+const createSupabaseClient = (): SupabaseClient => {
+  const env = checkEnv();
+  return createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
+};
+
+// 导出 Supabase 客户端实例
+export const supabase = createSupabaseClient();
+
+// 通用数据库操作函数
+export async function fetchOne<T>(
+  table: string,
+  column: string,
+  value: any
+): Promise<T | null> {
+  const { data, error } = await supabase
+    .from(table)
+    .select('*')
+    .eq(column, value)
+    .single();
+
+  if (error) {
+    console.error(`Error fetching from ${table}:`, error);
+    return null;
+  }
+
+  return data as T;
+}
+
+export async function fetchMany<T>(
+  table: string,
+  column?: string,
+  value?: any
+): Promise<T[]> {
+  let query = supabase.from(table).select('*');
+
+  if (column && value !== undefined) {
+    query = query.eq(column, value);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error(`Error fetching from ${table}:`, error);
+    return [];
+  }
+
+  return data as T[];
+}
+
+export async function insertOne<T>(
+  table: string,
+  data: Partial<T>
+): Promise<T | null> {
+  const { data: insertedData, error } = await supabase
+    .from(table)
+    .insert(data)
+    .single();
+
+  if (error) {
+    console.error(`Error inserting into ${table}:`, error);
+    return null;
+  }
+
+  return insertedData as T;
+}
+
+export async function updateOne<T>(
+  table: string,
+  column: string,
+  value: any,
+  data: Partial<T>
+): Promise<T | null> {
+  const { data: updatedData, error } = await supabase
+    .from(table)
+    .update(data)
+    .eq(column, value)
+    .single();
+
+  if (error) {
+    console.error(`Error updating in ${table}:`, error);
+    return null;
+  }
+
+  return updatedData as T;
+}
+
+export async function deleteOne(
+  table: string,
+  column: string,
+  value: any
+): Promise<boolean> {
+  const { error } = await supabase
+    .from(table)
+    .delete()
+    .eq(column, value);
+
+  if (error) {
+    console.error(`Error deleting from ${table}:`, error);
+    return false;
+  }
+
+  return true;
+}

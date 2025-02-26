@@ -1,35 +1,48 @@
-import React,{ createContext, useContext, useState, ReactNode } from "react";
+// FILEPATH: d:/ayi/zhangyu-main/client/src/context/UserContext.tsx
+
+import React, { createContext, useContext, ReactNode } from 'react';
+import { useAuth } from '../hooks/useAuth';
 
 interface User {
   id: string;
-  name: string;
-  points: number;
-  creditRating?: number;   // 添加信用评分字段
-  membershipLevel?: string; // 添加会员等级字段
+  username: string;
+  balance: number;
+  creditRating?: number;
+  membershipLevel?: string;
 }
 
 interface UserContextType {
   user: User | null;
-  setUser: (user: User | null) => void;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  login: (username: string, password: string) => Promise<void>;
+  register: (username: string, password: string) => Promise<void>;
+  logout: () => void;
+  updateUserBalance: (newBalance: number) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
-export const UserProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const auth = useAuth();
 
-  return (
-    <UserContext.Provider value={{ user, setUser }}>
-      {children}
-    </UserContext.Provider>
-  );
+  const value: UserContextType = {
+    user: auth.user,
+    isAuthenticated: auth.isAuthenticated,
+    isLoading: auth.isLoading,
+    login: auth.login,
+    register: auth.register,
+    logout: auth.logout,
+    updateUserBalance: auth.updateUserBalance,
+  };
+
+  return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 };
 
-export const useUser = () => {
+export const useUser = (): UserContextType => {
   const context = useContext(UserContext);
-  if (!context) {
-    throw new Error("useUser must be used within a UserProvider");
+  if (context === undefined) {
+    throw new Error('useUser must be used within a UserProvider');
   }
   return context;
 };
-

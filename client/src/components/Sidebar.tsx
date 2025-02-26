@@ -1,33 +1,65 @@
-import React from "react";
-import { Link } from "react-router-dom";
+// FILEPATH: d:/ayi/zhangyu-main/client/src/components/Sidebar.tsx
 
-const Sidebar = () => {
+import React from 'react';
+import { Layout, Menu } from 'antd';
+import { useNavigate, useLocation } from 'react-router-dom';
+import {
+  HomeOutlined,
+  UserOutlined,
+  HistoryOutlined,
+  GamepadOutlined,
+  SettingOutlined,
+} from '@ant-design/icons';
+import styled from 'styled-components';
+import { useTheme } from '../context/ThemeContext';
+
+const { Sider } = Layout;
+
+interface SidebarProps {
+  collapsed: boolean;
+  onCollapse: (collapsed: boolean) => void;
+}
+
+const StyledSider = styled(Sider)`
+  @media (max-width: 768px) {
+    position: absolute;
+    height: 100vh;
+    z-index: 999;
+  }
+`;
+
+const Sidebar: React.FC<SidebarProps> = ({ collapsed, onCollapse }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { themeMode } = useTheme();
+
+  const menuItems = [
+    { key: '/', icon: <HomeOutlined />, label: 'Home' },
+    { key: '/profile', icon: <UserOutlined />, label: 'Profile' },
+    { key: '/history', icon: <HistoryOutlined />, label: 'History' },
+    { key: '/game', icon: <GamepadOutlined />, label: 'Game' },
+    { key: '/settings', icon: <SettingOutlined />, label: 'Settings' },
+  ];
+
   return (
-    <div className="bg-gray-800 w-64 min-h-screen text-white p-6">
-      <h2 className="text-2xl mb-6">管理后台</h2>
-      <ul>
-        <li>
-          <Link to="/admin" className="block mb-4 hover:bg-gray-700 p-2 rounded">
-            首页
-          </Link>
-        </li>
-        <li>
-          <Link to="/admin/users" className="block mb-4 hover:bg-gray-700 p-2 rounded">
-            用户管理
-          </Link>
-        </li>
-        <li>
-          <Link to="/admin/bets" className="block mb-4 hover:bg-gray-700 p-2 rounded">
-            注单管理
-          </Link>
-        </li>
-        <li>
-          <Link to="/admin/stats" className="block mb-4 hover:bg-gray-700 p-2 rounded">
-            统计数据
-          </Link>
-        </li>
-      </ul>
-    </div>
+    <StyledSider
+      width={200}
+      theme={themeMode}
+      breakpoint="lg"
+      collapsed={collapsed}
+      onCollapse={onCollapse}
+    >
+      <Menu
+        mode="inline"
+        selectedKeys={[location.pathname]}
+        style={{ height: '100%', borderRight: 0 }}
+        items={menuItems}
+        onClick={({ key }) => {
+          navigate(key);
+        }}
+        theme={themeMode}
+      />
+    </StyledSider>
   );
 };
 

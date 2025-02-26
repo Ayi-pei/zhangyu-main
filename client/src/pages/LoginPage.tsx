@@ -1,27 +1,44 @@
-import { useEffect, useRef } from 'react';
+// FILEPATH: d:/ayi/zhangyu-main/client/src/pages/LoginPage.tsx
+
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import LoginForm from '../components/LoginForm';
 
-const LoginPage = () => {
+const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const hasCheckedLogin = useRef(false); // 避免 useEffect 重复执行
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    console.log('Checking login status...');
-    if (hasCheckedLogin.current) return;
-    hasCheckedLogin.current = true;
+    checkLoginStatus();
+  }, []);
 
-    const storedUsername = localStorage.getItem('username');
-    if (storedUsername) {
-      console.log('User already logged in, redirecting...');
-      navigate('/home', { replace: true });
+  const checkLoginStatus = async () => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const response = await axios.get('http://localhost:5000/api/auth/verify', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (response.data.isValid) {
+          navigate('/home');
+        }
+      } catch (error) {
+        console.error('Token verification failed:', error);
+        localStorage.removeItem('token');
+      }
     }
-  }, [navigate]);
-
-  const onLoginSuccess = () => {
-    localStorage.setItem('username', 'user');
-    navigate('/home', { replace: true });
+    setIsLoading(false);
   };
+
+  const onLoginSuccess = (token: string) => {
+    localStorage.setItem('token', token);
+    navigate('/home');
+  };
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center">

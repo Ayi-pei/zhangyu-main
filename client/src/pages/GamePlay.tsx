@@ -1,4 +1,6 @@
-import React,{ useState, useEffect } from 'react';
+// FILEPATH: d:/ayi/zhangyu-main/client/src/pages/GamePlay.tsx
+
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const getCurrentSeoulTime = () => {
@@ -7,7 +9,7 @@ const getCurrentSeoulTime = () => {
 
 const getDuration = (mode: string) => (mode === '3min' ? 180 : 300);
 
-const GamePlay = () => {
+const GamePlay: React.FC = () => {
   const [timeLeft, setTimeLeft] = useState(0);
   const [roundStartTime, setRoundStartTime] = useState<Date | null>(null);
   const [roundNumber, setRoundNumber] = useState('');
@@ -66,13 +68,19 @@ const GamePlay = () => {
   };
 
   useEffect(() => {
-    const storedBalance = localStorage.getItem('playerBalance');
-    setBalance(storedBalance ? parseInt(storedBalance) : 1000);
+    fetchBalance();
   }, []);
 
-  const updateBalance = (newBalance: number) => {
-    setBalance(newBalance);
-    localStorage.setItem('playerBalance', newBalance.toString());
+  const fetchBalance = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:5000/api/user/balance', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setBalance(response.data.balance);
+    } catch (error) {
+      console.error('Error fetching balance:', error);
+    }
   };
 
   const handleBet = async () => {
@@ -90,14 +98,25 @@ const GamePlay = () => {
     const isWin = selectedBets.some((bet) => results.includes(bet));
     const newBalance = isWin ? balance + betAmount * 2 : balance - betAmount;
 
-    updateBalance(newBalance);
-    setBetHistory([...betHistory, { bet_type: selectedBets, result: results, is_win: isWin }]);
-    setSelectedBets([]);
-    
     try {
-      await axios.post('/api/bets', { roundNumber, betType: selectedBets, result: results, isWin, betAmount, newBalance });
+      const token = localStorage.getItem('token');
+      await axios.post('http://localhost:5000/api/bets', {
+        roundNumber,
+        betType: selectedBets,
+        result: results,
+        isWin,
+        betAmount,
+        newBalance
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      setBalance(newBalance);
+      setBetHistory([...betHistory, { bet_type: selectedBets, result: results, is_win: isWin }]);
+      setSelectedBets([]);
     } catch (error) {
-      console.error('投注数据保存失败:', error);
+      console.error('投注失败:', error);
+      alert('投注失败，请重试');
     }
   };
 

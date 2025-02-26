@@ -1,31 +1,58 @@
-// src/routes/betRoutes.ts
-import express from 'express';
-import { checkAuthorization } from '../services/authService';  // 假设你有认证服务
-import { placeBet, getBetHistory } from '../services/betServices';
+// FILEPATH: d:/ayi/zhangyu-main/server/src/controllers/betController.ts
 
-const router = express.Router();
+import { Request, Response } from 'express';
+import { BetService } from '../services/betService';
 
-router.post('/place', checkAuthorization, async (req, res) => {
-  const { amount, gameId } = req.body;
-  if (isNaN(amount) || amount <= 0 || !gameId) {
-    return res.status(400).json({ success: false, message: '参数不合法' });
+const betService = new BetService();
+
+export class BetController {
+  async createBet(req: Request, res: Response) {
+    try {
+      const userId = (req as any).user.id;
+      const { amount, gameId } = req.body;
+      const bet = await betService.createBet(userId, amount, gameId);
+      res.status(201).json(bet);
+    } catch (error) {
+      res.status(400).json({ message: (error as Error).message });
+    }
   }
 
-  try {
-    await placeBet(req.user.id, amount, gameId);
-    res.json({ success: true, message: '投注成功' });
-  } catch (error) {
-    res.status(500).json({ success: false, message: '投注失败，请稍后再试' });
+  async getBetHistory(req: Request, res: Response) {
+    try {
+      const userId = (req as any).user.id;
+      const history = await betService.getBetsByUserId(userId);
+      res.json(history);
+    } catch (error) {
+      res.status(500).json({ message: (error as Error).message });
+    }
   }
-});
 
-router.get('/history', checkAuthorization, async (req, res) => {
-  try {
-    const history = await getBetHistory(req.user.id);
-    res.json({ success: true, history });
-  } catch (error) {
-    res.status(500).json({ success: false, message: '获取投注历史失败' });
+  async getBetById(req: Request, res: Response) {
+    try {
+      const betId = parseInt(req.params.id);
+      const bet = await betService.getBetById(betId);
+      if (bet) {
+        res.json(bet);
+      } else {
+        res.status(404).json({ message: 'Bet not found' });
+      }
+    } catch (error) {
+      res.status(500).json({ message: (error as Error).message });
+    }
   }
-});
 
-export default router;
+  async settleBet(req: Request, res: Response) {
+    try {
+      const betId = parseInt(req.params.id);
+      const { status } = req.body;
+      const updatedBet = await betService.settleBet(betId, status);
+      if (updatedBet) {
+        res.json(updatedBet);
+      } else {
+        res.status(404).json({ message: 'Bet not found' });
+      }
+    } catch (error) {
+      res.status(400).json({ message: (error as Error).message });
+    }
+  }
+}
