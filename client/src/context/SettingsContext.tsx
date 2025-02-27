@@ -8,6 +8,8 @@ interface Settings {
   notifications: boolean;
   soundEffects: boolean;
   autoSave: boolean;
+  theme: 'light' | 'dark'; // 添加 theme 属性
+  soundEnabled: boolean;   // 添加 soundEnabled 属性
 }
 
 interface SettingsContextType {
@@ -16,10 +18,12 @@ interface SettingsContextType {
 }
 
 const defaultSettings: Settings = {
-  language: 'en',
+  language: 'ko',
   notifications: true,
   soundEffects: true,
   autoSave: true,
+  theme: 'light',         // 默认设置为 'light'
+  soundEnabled: true,     // 默认设置为 true
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);

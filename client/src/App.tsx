@@ -18,11 +18,11 @@ import LoadingIndicator from './components/LoadingIndicator';
 // 导入页面组件
 import Home from './pages/Home';
 import Login from './pages/Login';
-import Register from './pages/Register';
+import Register from './components/RegisterForm';
 import Profile from './pages/Profile';
 import History from './pages/History';
 import Game from './pages/Game';
-import Settings from './pages/Settings';
+import Settings from './context/SettingsContext';
 import NotFound from './pages/NotFound';
 
 // 导入全局样式

@@ -9,5 +9,10 @@ export default defineConfig({
       '@': path.resolve(__dirname, 'src'),
 
     }
+  },
+  build: {
+    rollupOptions: {
+      input: 'public/index.html'  // 确保 index.html 作为入口
+    }
   }
 });
