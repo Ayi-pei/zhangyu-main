@@ -12,7 +12,7 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
-      input: 'public/index.html'  // 确保 index.html 作为入口
+      input: path.resolve(__dirname, 'public/index.html')
     }
   }
 });
