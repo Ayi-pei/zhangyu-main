@@ -1,72 +1,89 @@
 // FILEPATH: d:/ayi/zhangyu-main/server/src/services/betService.ts
 
-import { Bet, BetStatus } from '../models/bet';
+import { BaseService } from './baseService';
+import type { PrismaTypes } from '../types/prisma';
+import { CreateBetDto, BetStatus, ServiceResponse } from '../types';
+import { ServiceError } from '../types';
 
-export class BetService {
-  async createBet(userId: number, amount: number, odds: number): Promise<Bet> {
+export class BetService extends BaseService {
+  async createBet(userId: string, data: CreateBetDto): ServiceResponse<PrismaTypes.BetWithUser> {
     try {
-      const bet = await Bet.create({
-        userId,
-        amount,
-        odds,
-        status: BetStatus.PENDING
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId }
       });
-      return bet;
+
+      if (!user || user.credits < data.amount) {
+        throw new ServiceError('Insufficient credits', 400);
+      }
+
+      return await this.prisma.$transaction(async (tx) => {
+        // 扣除用户积分
+        await tx.user.update({
+          where: { id: userId },
+          data: { credits: { decrement: data.amount } }
+        });
+
+        // 创建投注记录
+        const bet = await tx.bet.create({
+          data: {
+            userId,
+            amount: data.amount,
+            odds: data.odds,
+            gameId: data.gameId,
+            status: BetStatus.PENDING
+          },
+          include: { user: true }
+        });
+
+        return { success: true, data: bet };
+      });
     } catch (error) {
-      throw new Error(`Failed to create bet: ${error.message}`);
+      if (error instanceof ServiceError) throw error;
+      throw new ServiceError('Failed to create bet', 500, error);
     }
   }
 
-  async getBetById(id: number): Promise<Bet | null> {
+  async getBetHistory(userId: string): ServiceResponse<PrismaTypes.BetWithUser[]> {
     try {
-      const bet = await Bet.findByPk(id);
-      return bet;
+      const bets = await this.prisma.bet.findMany({
+        where: { userId },
+        include: { user: true },
+        orderBy: { createdAt: 'desc' }
+      });
+      return { success: true, data: bets };
     } catch (error) {
-      throw new Error(`Failed to get bet: ${error.message}`);
+      throw new ServiceError('Failed to get bet history', 500, error);
     }
   }
 
-  async getBetsByUserId(userId: number): Promise<Bet[]> {
+  async updateBetStatus(id: string, status: BetStatus): ServiceResponse<PrismaTypes.BetWithUser> {
     try {
-      const bets = await Bet.findAll({ where: { userId } });
-      return bets;
-    } catch (error) {
-      throw new Error(`Failed to get bets for user: ${error.message}`);
-    }
-  }
+      const bet = await this.prisma.bet.findUnique({
+        where: { id },
+        include: { user: true }
+      });
 
-  async updateBetStatus(id: number, status: BetStatus): Promise<Bet | null> {
-    try {
-      const bet = await Bet.findByPk(id);
       if (!bet) {
-        return null;
+        throw new ServiceError('Bet not found', 404);
       }
-      bet.status = status;
-      await bet.save();
-      return bet;
-    } catch (error) {
-      throw new Error(`Failed to update bet status: ${error.message}`);
-    }
-  }
 
-  async deleteBet(id: number): Promise<boolean> {
-    try {
-      const result = await Bet.destroy({ where: { id } });
-      return result > 0;
-    } catch (error) {
-      throw new Error(`Failed to delete bet: ${error.message}`);
-    }
-  }
-
-  async calculateWinnings(betId: number): Promise<number> {
-    try {
-      const bet = await this.getBetById(betId);
-      if (!bet || bet.status !== BetStatus.WON) {
-        return 0;
+      if (status === BetStatus.WON) {
+        await this.prisma.user.update({
+          where: { id: bet.userId },
+          data: { credits: { increment: bet.amount * bet.odds } }
+        });
       }
-      return bet.amount * bet.odds;
+
+      const updatedBet = await this.prisma.bet.update({
+        where: { id },
+        data: { status },
+        include: { user: true }
+      });
+
+      return { success: true, data: updatedBet };
     } catch (error) {
-      throw new Error(`Failed to calculate winnings: ${error.message}`);
+      if (error instanceof ServiceError) throw error;
+      throw new ServiceError('Failed to update bet status', 500, error);
     }
   }
 }

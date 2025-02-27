@@ -5,6 +5,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { userRouter } from './routes/userRoutes';
 import { betRouter } from './routes/betRoutes';
+import type { PrismaTypes } from '../prisma';
 
 // 加载环境变量
 dotenv.config();
@@ -36,6 +37,16 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 app.use((req: Request, res: Response) => {
   res.status(404).send('Sorry, that route does not exist.');
 });
+
+declare global {
+  namespace Express {
+    interface Request {
+      user: PrismaTypes.UserWithRelations;
+    }
+  }
+}
+
+export {};
 
 // 启动服务器
 app.listen(port, () => {

@@ -1,72 +1,80 @@
 // FILEPATH: d:/ayi/zhangyu-main/server/src/utils/router.ts
 
-import express, { Request, Response, NextFunction } from 'express';
-import { checkAuthorization } from '../middleware/auth';
-import { saveCardInfo, getExchangeHistory, deductPoints, addExchangeRecord } from '../services/services';
+import { Router } from 'express';
+import type { RequestHandler } from 'express';
+import { validateRequest } from '../middleware/validation';
+import { authMiddleware } from '../middleware/auth';
+import { cardService, exchangeService } from '../services';
+import type { IUser } from '../models/types';
+import { z } from 'zod';
+import type { CreateCardDto, CreateExchangeDto } from '../types';
 
-const router = express.Router();
-
-// 定义请求体的接口
-interface BindCardRequest {
-  cardNumber: string;
-  bank: string;
-  cardHolder: string;
-  exchangeCode: string;
+// 扩展 Express 的 Request 类型
+declare module 'express-serve-static-core' {
+  interface Request {
+    user: IUser;
+  }
 }
 
-interface ExchangeRequest {
-  amount: number;
-  verificationCode: string;
-}
+const router = Router();
 
-// 绑定银行卡接口
-router.post('/bind-card', checkAuthorization, async (req: Request<{}, {}, BindCardRequest>, res: Response, next: NextFunction) => {
-  const { cardNumber, bank, cardHolder, exchangeCode } = req.body;
-  if (!cardNumber || !bank || !cardHolder || !exchangeCode) {
-    return res.status(400).json({ success: false, message: '缺少必要的参数' });
-  }
+// 创建验证 schema
+const bindCardSchema = z.object({
+  cardNumber: z.string(),
+  cardHolder: z.string(),
+  expiryDate: z.string(),
+  cvv: z.string()
+});
 
+const exchangeSchema = z.object({
+  amount: z.number(),
+  cardId: z.string()
+});
+
+// 类型安全的路由处理器
+const bindCardHandler: RequestHandler = async (req, res, next): Promise<void> => {
   try {
-    // 保存银行卡信息
-    await saveCardInfo(req.user!.id, cardNumber, bank, cardHolder, exchangeCode);
-    res.json({ success: true, message: '银行卡绑定成功' });
+    const cardData: CreateCardDto = {
+      cardNumber: req.body.cardNumber,
+      cardHolder: req.body.cardHolder,
+      expiryDate: req.body.expiryDate,
+      cvv: req.body.cvv
+    };
+    
+    const result = await cardService.saveCardInfo(req.user.id, cardData);
+    res.json(result);
   } catch (error) {
     next(error);
   }
-});
+};
 
-// 积分兑换接口
-router.post('/exchange', checkAuthorization, async (req: Request<{}, {}, ExchangeRequest>, res: Response, next: NextFunction) => {
-  const { amount, verificationCode } = req.body;
-
-  if (isNaN(amount) || amount <= 0) {
-    return res.status(400).json({ success: false, message: '请输入有效的兑换积分数量' });
-  }
-
-  const user = req.user!;
-  if (user.points < amount) {
-    return res.status(400).json({ success: false, message: '积分不足' });
-  }
-
+const exchangeHandler: RequestHandler = async (req, res, next): Promise<void> => {
   try {
-    // 扣除积分并记录兑换
-    await deductPoints(user.id, amount);
-    await addExchangeRecord(user.id, amount, verificationCode);
-
-    res.json({ success: true, message: '兑换成功' });
+    const exchangeData: CreateExchangeDto = {
+      amount: req.body.amount,
+      cardId: req.body.cardId
+    };
+    
+    const result = await exchangeService.createExchange(req.user.id, exchangeData);
+    res.json(result);
   } catch (error) {
     next(error);
   }
-});
+};
 
-// 查看积分历史接口
-router.get('/exchange-history', checkAuthorization, async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const history = await getExchangeHistory(req.user!.id);
-    res.json({ success: true, history });
-  } catch (error) {
-    next(error);
-  }
-});
+// 路由定义
+router.post(
+  '/bind-card',
+  authMiddleware as RequestHandler,
+  validateRequest(bindCardSchema) as unknown as RequestHandler,
+  bindCardHandler
+);
+
+router.post(
+  '/exchange',
+  authMiddleware as RequestHandler,
+  validateRequest(exchangeSchema) as unknown as RequestHandler,
+  exchangeHandler
+);
 
 export default router;

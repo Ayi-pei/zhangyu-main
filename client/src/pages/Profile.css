@@ -109,3 +109,39 @@
     margin-right: auto;
   }
 }
+
+.credit-score {
+  font-size: 2.5rem;
+  font-weight: bold;
+  text-align: center;
+  margin: 1rem 0;
+}
+
+.level-stars {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.star-icon {
+  transition: all 0.3s ease;
+}
+
+.star-icon:hover {
+  transform: scale(1.1);
+}
+
+.support-modal {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

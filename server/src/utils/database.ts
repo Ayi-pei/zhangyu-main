@@ -2,6 +2,8 @@
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import { Pool } from 'pg';
+import { config } from '../config/config';
 
 dotenv.config();
 
@@ -31,6 +33,31 @@ const createSupabaseClient = (): SupabaseClient => {
 
 // 导出 Supabase 客户端实例
 export const supabase = createSupabaseClient();
+
+const pool = new Pool({
+  ...config.database,
+  max: 20, // 连接池最大连接数
+  idleTimeoutMillis: 30000, // 空闲连接超时时间
+  connectionTimeoutMillis: 2000 // 连接超时时间
+});
+
+// 添加连接错误处理
+pool.on('error', (err) => {
+  console.error('数据库连接错误:', err);
+});
+
+// 添加连接池健康检查
+const checkDatabaseConnection = async () => {
+  try {
+    const client = await pool.connect();
+    await client.query('SELECT 1');
+    client.release();
+    return true;
+  } catch (error) {
+    console.error('数据库健康检查失败:', error);
+    return false;
+  }
+};
 
 // 通用数据库操作函数
 export async function fetchOne<T>(
@@ -127,3 +154,5 @@ export async function deleteOne(
 
   return true;
 }
+
+export { pool, checkDatabaseConnection };

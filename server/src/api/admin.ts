@@ -2,6 +2,9 @@
 
 import axios, { AxiosResponse } from 'axios';
 import { Bet, Stats, User } from '../types';
+import { Router } from 'express';
+import { AdminController } from '../controllers/adminController';
+import { authMiddleware, checkAdmin } from '../middleware/auth';
 
 const API_URL = process.env.ADMIN_API_URL || 'http://localhost:5000/api/admin';
 
@@ -79,3 +82,18 @@ export const fetchStats = async (): Promise<Stats> => {
     return handleError(error);
   }
 };
+
+const router = Router();
+const adminController = new AdminController();
+
+// 使用中间件
+router.use('/', authMiddleware);
+router.use('/', checkAdmin);
+
+// 路由定义
+router.get('/users', (req, res) => adminController.getUsers(req, res));
+router.put('/users/:id', (req, res) => adminController.updateUser(req, res));
+router.delete('/users/:id', (req, res) => adminController.deleteUser(req, res));
+router.get('/lottery/stats', (req, res) => adminController.getLotteryStats(req, res));
+
+export default router;

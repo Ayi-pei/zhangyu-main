@@ -1,10 +1,31 @@
 {
-	"folders": [
-		{
-			"path": "."
-		}
-	],
-	"settings": {
-		"typescript.tsdk": "server/node_modules/typescript/lib"
-	}
+    "settings": {
+        // 使用新的设置替代旧的设置
+        "editor.gotoLocation.multipleDefinitions": "firstFile",
+        "editor.gotoLocation.multipleImplementations": "firstFile",
+        "editor.gotoLocation.multipleReferences": "firstFile",
+        "editor.linkedEditing": true,
+        "editor.suggestSelection": "first",
+        "workbench.list.defaultFindMode": "filter",
+        "workbench.list.typeNavigationMode": "automatic",
+        "search.useReplacePreview": true,
+        "update.mode": "default",
+        "comments.openView": "openOnSessionStart",
+        "editor.colorDecorators": true,
+        "js/ts.implicitProjectConfig.checkJs": false,
+        "js/ts.implicitProjectConfig.experimentalDecorators": false,
+        "typescript.preferences.useAliasesForRenames": true,
+        "typescript.tsserver.useSyntaxServer": "auto",
+        "extensions.ignoreRecommendations": false,
+        "terminal.integrated.enableVisualBell": false,
+        "accessibility.signals.terminalBell": false,
+        "crashReporting.enabled": true,
+        "chat.detectParticipant.enabled": false,
+        "github.gitAuthentication": true
+    },
+    "folders": [
+        {
+            "path": "."
+        }
+    ]
 }

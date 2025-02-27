@@ -1,18 +1,20 @@
 {
-  "dependencies": {
-    "@supabase/supabase-js": "^2.49.1",
-    "axios": "^1.7.9",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
-    "lucide-react": "^0.476.0",
-    "qrcode.react": "^4.2.0",
-    "react-router-dom": "^7.2.0",
-    "recharts": "^2.15.1"
+  "name": "zhangyu-main",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=server & npm run dev --workspace=client",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces",
+    "lint": "npm run lint --workspaces"
   },
   "devDependencies": {
-    "@types/express": "^5.0.0",
-    "@types/react": "^19.0.10",
-    "@vitejs/plugin-react": "^4.3.4",
-    "vite": "^6.2.0"
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "typescript": "^5.0.0"
   }
 }
