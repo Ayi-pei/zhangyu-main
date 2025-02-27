@@ -1,26 +1,24 @@
 import { Router } from 'express';
-import { validateRequest } from '../middleware/validation';
-import { authMiddleware } from '../middleware/auth';
-import { exchangeService } from '../services';
-import { z } from 'zod';
+import { validateRequest } from '../middleware/validateRequest';
+import { authenticateToken } from '../middleware/auth';
+import { exchangeService } from '../services/services';
+import { ExchangeSchema } from '../schemas/exchange.schema';
 
 const router = Router();
 
-const exchangeSchema = z.object({
-  amount: z.number().positive(),
-  cardId: z.string()
-});
-
-router.use(authMiddleware);
-
-router.post('/', validateRequest(exchangeSchema), async (req, res, next) => {
-  try {
-    const result = await exchangeService.createExchange(req.user.id, req.body);
-    res.json(result);
-  } catch (error) {
-    next(error);
+router.post('/', 
+  authenticateToken,
+  validateRequest(ExchangeSchema),
+  async (req, res, next) => {
+    try {
+      const { userId, cardId, amount } = req.body;
+      const result = await exchangeService.processExchange(userId, cardId, amount);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
   }
-});
+);
 
 router.get('/', async (req, res, next) => {
   try {

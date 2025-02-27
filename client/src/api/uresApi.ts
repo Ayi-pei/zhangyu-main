@@ -160,3 +160,52 @@ export const fetchUserList = async () => {
     throw new Error('无法获取用户列表');
   }
 };
+
+// 获取投注列表
+export const getBets = async (page: number = 1, limit: number = 10) => {
+  try {
+    const { data, error, count } = await supabase
+      .from('bets')
+      .select('*', { count: 'exact' })
+      .range((page - 1) * limit, page * limit - 1)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return { bets: data, totalCount: count };
+  } catch (error: any) {
+    console.error('Error fetching bets:', error.message);
+    return { bets: [], totalCount: 0 };
+  }
+};
+
+// 删除投注
+export const deleteBet = async (betId: string) => {
+  try {
+    const { error } = await supabase
+      .from('bets')
+      .delete()
+      .eq('id', betId);
+    
+    if (error) throw error;
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error deleting bet:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
+// 审批投注
+export const approveBet = async (betId: string, status: 'approved' | 'rejected') => {
+  try {
+    const { error } = await supabase
+      .from('bets')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', betId);
+    
+    if (error) throw error;
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error approving bet:', error.message);
+    return { success: false, error: error.message };
+  }
+};

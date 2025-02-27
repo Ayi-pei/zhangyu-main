@@ -12,9 +12,16 @@
     "lint": "npm run lint --workspaces"
   },
   "devDependencies": {
+    "@types/json-schema": "^7.0.15",
+    "@types/semver": "^7.5.8",
+    "@types/styled-components": "^5.1.34",
+    "@types/stylis": "^4.2.7",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
     "eslint": "^8.0.0",
     "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "styled-components": "^6.1.15"
   }
 }

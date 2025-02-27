@@ -1,43 +1,73 @@
 import { Router } from 'express';
-import { validateRequest } from '../middleware/validation';
-import { authService } from '../services';
-import { z } from 'zod';
+import { validateRequest } from '../middleware/validateRequest';
+import { AuthService } from '../services/authService';
+import { CreateUserSchema, LoginSchema } from '../schemas/auth.schema';
 
 const router = Router();
+const authService = new AuthService();
 
-const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6)
-});
-
-const registerSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6),
-  username: z.string().min(3)
-});
-
-router.post('/login', validateRequest(loginSchema), async (req, res, next) => {
-  try {
-    const result = await authService.authenticateUser(req.body.email, req.body.password);
-    if (result.success && result.data) {
-      const token = authService.generateToken(result.data);
-      res.json({ token, user: result.data });
-    } else {
-      res.status(401).json({ error: 'Invalid credentials' });
+// 用户注册
+router.post('/register',
+  validateRequest(CreateUserSchema),
+  async (req, res, next) => {
+    try {
+      const result = await authService.createUser(req.body);
+      if (result.success) {
+        const token = authService.generateToken(result.data);
+        res.json({
+          user: result.data,
+          token
+        });
+      } else {
+        res.status(400).json({ error: '用户创建失败' });
+      }
+    } catch (error) {
+      next(error);
     }
-  } catch (error) {
-    next(error);
   }
-});
+);
 
-router.post('/register', validateRequest(registerSchema), async (req, res, next) => {
+// 用户登录
+router.post('/login',
+  validateRequest(LoginSchema),
+  async (req, res, next) => {
+    try {
+      const { email, password } = req.body;
+      const result = await authService.authenticateUser(email, password);
+      if (result.success) {
+        const token = authService.generateToken(result.data);
+        res.json({
+          user: result.data,
+          token
+        });
+      } else {
+        res.status(401).json({ error: '登录失败' });
+      }
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// 刷新token
+router.post('/refresh-token', async (req, res, next) => {
   try {
-    const result = await authService.createUser(req.body);
-    if (result.success && result.data) {
-      const token = authService.generateToken(result.data);
-      res.json({ token, user: result.data });
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      return res.status(401).json({ error: '未提供token' });
+    }
+
+    const decoded = authService.verifyToken(token);
+    if (!decoded) {
+      return res.status(401).json({ error: 'token无效' });
+    }
+
+    const result = await authService.authenticateUser(decoded.email, '');
+    if (result.success) {
+      const newToken = authService.refreshToken(result.data);
+      res.json({ token: newToken });
     } else {
-      res.status(400).json({ error: 'Registration failed' });
+      res.status(401).json({ error: '刷新token失败' });
     }
   } catch (error) {
     next(error);

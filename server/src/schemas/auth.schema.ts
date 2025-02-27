@@ -1,23 +1,15 @@
 import { z } from 'zod';
 
-export const registerSchema = z.object({
-  username: z.string()
-    .min(3, '用户名至少3个字符')
-    .max(20, '用户名最多20个字符'),
-  email: z.string()
-    .email('请输入有效的邮箱地址'),
-  password: z.string()
-    .min(6, '密码至少6个字符')
-    .max(50, '密码最多50个字符'),
-  confirmPassword: z.string()
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "密码不匹配",
-  path: ["confirmPassword"],
+export const CreateUserSchema = z.object({
+  email: z.string().email('邮箱格式不正确'),
+  password: z.string().min(6, '密码至少6个字符'),
+  username: z.string().min(2, '用户名至少2个字符'),
 });
 
-export const loginSchema = z.object({
-  email: z.string()
-    .email('请输入有效的邮箱地址'),
-  password: z.string()
-    .min(6, '密码至少6个字符')
-}); 
+export const LoginSchema = z.object({
+  email: z.string().email('邮箱格式不正确'),
+  password: z.string().min(6, '密码至少6个字符'),
+});
+
+export type CreateUserDto = z.infer<typeof CreateUserSchema>;
+export type LoginDto = z.infer<typeof LoginSchema>; 
