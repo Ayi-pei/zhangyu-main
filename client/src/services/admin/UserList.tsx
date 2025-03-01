@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { adminAPI } from '../../services/api';
-import { Table } from '../common/Table';
+import { adminAPI } from '../api';
+import { Table } from '../../components/common/Table';
 import { IUser, TableColumn } from '../../types';
 import { message } from 'antd';
 

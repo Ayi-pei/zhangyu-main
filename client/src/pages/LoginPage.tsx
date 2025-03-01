@@ -1,83 +1,136 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
-import { User } from '../types';
+import { BarChart3, User, Lock } from 'lucide-react';
+import { useAuthStore } from '../store/authStore';
+import Button from '../components/ui/Button';
+import Input from '../components/ui/Input';
+import toast from 'react-hot-toast';
 
-const setupAdminAccount = () => {
-    const users: User[] = JSON.parse(localStorage.getItem('users') || '[]');
-    if (!users.some(u => u.username === 'admin01')) {
-        users.push({ username: 'admin01', password: 'admins01' });
-        localStorage.setItem('users', JSON.stringify(users));
-    }
-};
-
-function LoginPage() {
-    const navigate = useNavigate();
-    useEffect(() => { setupAdminAccount(); }, []);
-
-    const [formData, setFormData] = useState({ username: '', password: '' });
-    const [errors, setErrors] = useState<{ [key: string]: string }>({});
-
-    const validateForm = () => {
-        const newErrors: { [key: string]: string } = {};
-        if (formData.username.length < 6 || formData.username.length > 8) {
-            newErrors.username = '用户名必须为6-8位字符';
-        }
-        if (formData.password.length < 6 || formData.password.length > 8) {
-            newErrors.password = '密码必须为6-8位字符';
-        }
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (validateForm()) {
-            const users: User[] = JSON.parse(localStorage.getItem('users') || '[]');
-            const user = users.find((u: User) => u.username === formData.username);
-
-            if (user) {
-                if (user.password === formData.password) {
-                    localStorage.setItem('isAuthenticated', 'true');
-                    localStorage.setItem('currentUser', formData.username);
-                    localStorage.setItem('userRole', formData.username === 'admin01' ? 'admin' : 'user');
-
-                    if (formData.username === 'admin01') {
-                        navigate('/admin');
-                    } else {
-                        navigate('/home');
-                    }
-                } else {
-                    setErrors({ login: '密码不正确' });
-                }
-            } else {
-                const confirmRegister = window.confirm('用户名不存在，是否立即注册？');
-                if (confirmRegister) {
-                    users.push({ username: formData.username, password: formData.password });
-                    localStorage.setItem('users', JSON.stringify(users));
-                    alert('注册成功，请重新登录');
-                } else {
-                    setErrors({ login: '用户名不存在' });
-                }
-            }
-        }
-    };
-
-    return (
-        <div>
-            <h1>前台登录页面</h1>
-            <form onSubmit={handleSubmit}>
-                <input type="text" name="username" placeholder="用户名" value={formData.username} onChange={handleChange} />
-                <input type="password" name="password" placeholder="密码" value={formData.password} onChange={handleChange} />
-                <button type="submit">登录</button>
-                {errors.login && <p>{errors.login}</p>}
-            </form>
-        </div>
-    );
+interface LoginFormData {
+  username: string;
+  password: string;
 }
+
+const LoginPage: React.FC = () => {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const { login, isLoading } = useAuthStore();
+  const navigate = useNavigate();
+  
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormData>({
+    defaultValues: {
+      username: '',
+      password: '',
+    },
+  });
+  
+  const onSubmit = async (data: LoginFormData) => {
+    setError('');
+    
+    try {
+      const result = await login(data.username, data.password);
+      if (result.success) {
+        toast.success('Login successful');
+        navigate('/');
+      } else {
+        setError('登录失败，请检查用户名和密码');
+      }
+    } catch (error) {
+      setError('登录时发生错误');
+      console.error(error);
+    }
+  };
+  
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="flex justify-center">
+          <BarChart3 className="h-12 w-12 text-primary-600" />
+        </div>
+        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          AYI Admin Dashboard
+        </h2>
+        <p className="mt-2 text-center text-sm text-gray-600">
+          Sign in to your account
+        </p>
+      </div>
+      
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+              {error}
+            </div>
+          )}
+          
+          <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+            <Input
+              label="Username"
+              leftIcon={<User size={18} className="text-gray-400" />}
+              error={errors.username?.message}
+              {...register('username', {
+                required: 'Username is required',
+              })}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+            
+            <Input
+              label="Password"
+              type="password"
+              leftIcon={<Lock size={18} className="text-gray-400" />}
+              error={errors.password?.message}
+              {...register('password', {
+                required: 'Password is required',
+              })}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            
+            <div>
+              <Button
+                type="submit"
+                className="w-full"
+                isLoading={isLoading}
+              >
+                Sign in
+              </Button>
+            </div>
+          </form>
+          
+          <div className="mt-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">
+                  Demo credentials
+                </span>
+              </div>
+            </div>
+            
+            <div className="mt-6 grid grid-cols-1 gap-3">
+              <div className="rounded-md bg-gray-50 p-3">
+                <p className="text-sm text-gray-700">
+                  <span className="font-medium">Username:</span> admin01
+                </p>
+                <p className="text-sm text-gray-700">
+                  <span className="font-medium">Password:</span> admins01
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default LoginPage;
