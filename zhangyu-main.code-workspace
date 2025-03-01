@@ -21,7 +21,15 @@
         "accessibility.signals.terminalBell": false,
         "crashReporting.enabled": true,
         "chat.detectParticipant.enabled": false,
-        "github.gitAuthentication": true
+        "github.gitAuthentication": true,
+        "terminal.integrated.accessibleViewFocusOnCommandExecution": true,
+        "terminal.integrated.accessibleViewPreserveCursorPosition": true,
+        "terminal.integrated.copyOnSelection": true,
+        "terminal.integrated.cursorBlinking": true,
+        "terminal.integrated.experimental.windowsUseConptyDll": true,
+        "merge-conflict.autoNavigateNextConflict.enabled": true,
+        "javascript.format.insertSpaceAfterConstructor": true,
+        "javascript.format.insertSpaceAfterOpeningAndBeforeClosingJsxExpressionBraces": true
     },
     "folders": [
         {
