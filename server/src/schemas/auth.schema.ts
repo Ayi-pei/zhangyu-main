@@ -17,7 +17,9 @@ export const LoginSchema = z.object({
 });
 
 // 注册验证
-export const RegisterSchema = LoginSchema.extend({
+export const RegisterSchema = z.object({
+  username: usernameSchema,
+  password: passwordSchema,
   confirmPassword: passwordSchema
 }).refine((data) => data.password === data.confirmPassword, {
   message: "两次输入的密码不一致",

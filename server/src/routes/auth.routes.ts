@@ -37,16 +37,22 @@ router.post('/logout',
   }
 );
 
-router.get('/profile', authMiddleware.authenticate, authController.getProfile);
+router.get('/profile', authMiddleware.authenticate, (req, res, next) => {
+  authController.getProfile(req, res).catch(next);
+});
 
 router.post('/forgot-password',
   validateRequest(ForgotPasswordSchema),
-  (req, res) => authController.forgotPassword(req, res)
+  (req, res, next) => {
+    authController.forgotPassword(req, res).catch(next);
+  }
 );
 
 router.post('/reset-password',
   validateRequest(ResetPasswordSchema),
-  (req, res) => authController.resetPassword(req, res)
+  (req, res, next) => {
+    authController.resetPassword(req, res).catch(next);
+  }
 );
 
 export default router; 

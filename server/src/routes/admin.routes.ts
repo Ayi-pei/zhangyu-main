@@ -1,47 +1,52 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router } from 'express';
 import { AdminController } from '../controllers/admin.controller';
-import { authMiddleware, checkAdmin } from '../middleware/auth';
 
 const router = Router();
 const adminController = new AdminController();
 
-// 使用认证中间件
-router.use(authMiddleware);
-router.use(checkAdmin);
+// 用户管理
+router.get('/users', (req, res, next) => {
+  adminController.getUsers(req, res).catch(next);
+});
 
-// 搜索功能
-router.get('/search', (req: Request, res: Response, next: NextFunction) => {
+router.post('/users', (req, res, next) => {
+  adminController.createUser(req, res).catch(next);
+});
+
+router.put('/users/:id', (req, res, next) => {
+  adminController.updateUser(req, res).catch(next);
+});
+
+router.delete('/users/:id', (req, res, next) => {
+  adminController.deleteUser(req, res).catch(next);
+});
+
+// 投注管理
+router.get('/betting-records', (req, res, next) => {
+  adminController.getBettingRecords(req, res).catch(next);
+});
+
+router.put('/betting-records/:id', (req, res, next) => {
+  adminController.updateBettingResult(req, res).catch(next);
+});
+
+// 交易管理
+router.get('/transactions', (req, res, next) => {
+  adminController.getTransactions(req, res).catch(next);
+});
+
+router.put('/transactions/:id', (req, res, next) => {
+  adminController.processTransaction(req, res).catch(next);
+});
+
+// 高级搜索
+router.get('/search', (req, res, next) => {
   adminController.search(req, res).catch(next);
 });
 
-// 获取未来开奖结果
-router.get('/lottery/future', (req: Request, res: Response, next: NextFunction) => {
-  adminController.getFutureLotteryResults(req, res).catch(next);
-});
-
-// 用户管理
-router.put('/users/:userId/level', (req: Request, res: Response, next: NextFunction) => {
-  adminController.updateUserLevel(req, res).catch(next);
-});
-
-router.put('/users/:userId/credit-score', (req: Request, res: Response, next: NextFunction) => {
-  adminController.updateCreditScore(req, res).catch(next);
-});
-
-router.get('/dashboard', (req: Request, res: Response, next: NextFunction) => {
+// 仪表盘数据
+router.get('/dashboard', (req, res, next) => {
   adminController.getDashboardData(req, res).catch(next);
-});
-
-router.post('/users/batch-delete', (req: Request, res: Response, next: NextFunction) => {
-  adminController.batchDeleteUsers(req, res).catch(next);
-});
-
-router.post('/users/batch-update', (req: Request, res: Response, next: NextFunction) => {
-  adminController.batchUpdateUsers(req, res).catch(next);
-});
-
-router.get('/users/export', (req: Request, res: Response, next: NextFunction) => {
-  adminController.exportUsers(req, res).catch(next);
 });
 
 export default router; 

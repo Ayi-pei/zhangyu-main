@@ -16,12 +16,13 @@ export const errorHandler = (
   req: Request,
   res: Response,
   next: NextFunction
-) => {
+): void => {
   if (err instanceof AppError) {
-    return res.status(err.statusCode).json({
+    res.status(err.statusCode).json({
       message: err.message,
       isOperational: err.isOperational
     });
+    return;
   }
 
   // 处理未知错误
@@ -36,6 +37,6 @@ export const notFoundHandler = (
   req: Request,
   res: Response,
   next: NextFunction
-) => {
+): void => {
   next(new AppError(`找不到路径: ${req.originalUrl}`, 404));
 }; 

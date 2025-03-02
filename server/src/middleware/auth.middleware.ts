@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import type { JwtPayload } from '../types/auth.types';
+import { AppError } from '../middleware/error.middleware';
 
 declare global {
   namespace Express {
@@ -14,7 +15,7 @@ declare global {
 }
 
 export const authMiddleware = {
-  authenticate: (req: Request, res: Response, next: NextFunction) => {
+  authenticate: (req: Request, res: Response, next: NextFunction): void => {
     try {
       const token = req.headers.authorization?.split(' ')[1];
       if (!token) {
@@ -32,7 +33,7 @@ export const authMiddleware = {
     }
   },
 
-  requireAdmin: (req: Request, res: Response, next: NextFunction) => {
+  requireAdmin: (req: Request, res: Response, next: NextFunction): void => {
     if (req.user?.role !== 'admin') {
       return res.status(403).json({ message: '需要管理员权限' });
     }

@@ -28,5 +28,5 @@ async function startServer() {
 startServer();
 
 process.on('unhandledRejection', (error) => {
-  logger.error('未处理的 Promise 拒绝:', error);
+  console.error('未处理的 Promise 拒绝:', error);
 });

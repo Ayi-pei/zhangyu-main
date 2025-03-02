@@ -1,3 +1,13 @@
+export interface IGameBet {
+  id: string;
+  userId: string;
+  roundNumber: string;
+  betType: 'big' | 'small' | 'odd' | 'even';
+  amount: number;
+  status: 'pending' | 'won' | 'lost' | 'cancelled';
+  createdAt: Date;
+}
+
 export interface IGameRound {
   id: string;
   roundNumber: string;
@@ -7,12 +17,9 @@ export interface IGameRound {
   status: 'pending' | 'active' | 'completed';
 }
 
-export interface IBet {
-  id: string;
-  userId: string;
-  roundNumber: string;
-  betType: 'big' | 'small' | 'odd' | 'even';
-  amount: number;
-  status: 'pending' | 'won' | 'lost' | 'cancelled';
-  createdAt: Date;
+export interface GameQueryParams {
+  roundNumber?: string;
+  startDate?: string;
+  endDate?: string;
+  status?: string;
 } 

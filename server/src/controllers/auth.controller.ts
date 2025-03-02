@@ -85,11 +85,12 @@ export class AuthController extends BaseController {
     );
   }
 
-  async getProfile(req: Request, res: Response) {
+  async getProfile(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.user?.id;
       if (!userId) {
-        return res.status(401).json({ message: '未认证' });
+        res.status(401).json({ message: '未认证' });
+        return;
       }
 
       const user = await this.authService.getUserById(userId);

@@ -1,5 +1,5 @@
-import { PrismaClient, Prisma } from '@prisma/client';
-import { prisma } from '../utils/prisma';
+import { PrismaClient } from '@prisma/client';
+import { prisma } from '../db';
 
 export class BaseService {
   protected prisma: PrismaClient;
@@ -10,7 +10,7 @@ export class BaseService {
 
   // 事务处理
   protected async withTransaction<T>(
-    callback: (tx: Prisma.TransactionClient) => Promise<T>
+    callback: (prisma: Omit<PrismaClient, "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">) => Promise<T>
   ): Promise<T> {
     return this.prisma.$transaction(callback);
   }
@@ -18,18 +18,12 @@ export class BaseService {
   // 通用分页查询
   protected async paginate<T>(
     model: any,
-    {
-      page = 1,
-      pageSize = 10,
-      where = {},
-      orderBy = { createdAt: 'desc' },
-      include = {}
-    }: {
+    params: {
       page?: number;
       pageSize?: number;
       where?: any;
-      orderBy?: any;
       include?: any;
+      orderBy?: any;
     }
   ): Promise<{
     items: T[];
@@ -38,24 +32,28 @@ export class BaseService {
     pageSize: number;
     totalPages: number;
   }> {
+    const { page = 1, pageSize = 10, where, include, orderBy } = params;
     const skip = (page - 1) * pageSize;
+    
     const [total, items] = await Promise.all([
       model.count({ where }),
       model.findMany({
-        where,
         skip,
         take: pageSize,
-        orderBy,
-        include
+        where,
+        include,
+        orderBy
       })
     ]);
-
+    
+    const totalPages = Math.ceil(total / pageSize);
+    
     return {
       items,
       total,
       page,
       pageSize,
-      totalPages: Math.ceil(total / pageSize)
+      totalPages
     };
   }
 
@@ -63,9 +61,9 @@ export class BaseService {
   protected async findOne<T>(
     model: any,
     where: any,
-    include: any = {}
+    include?: any
   ): Promise<T | null> {
-    return model.findFirst({
+    return model.findUnique({
       where,
       include
     });
@@ -75,7 +73,7 @@ export class BaseService {
   protected async create<T>(
     model: any,
     data: any,
-    include: any = {}
+    include?: any
   ): Promise<T> {
     return model.create({
       data,
@@ -88,7 +86,7 @@ export class BaseService {
     model: any,
     where: any,
     data: any,
-    include: any = {}
+    include?: any
   ): Promise<T> {
     return model.update({
       where,
@@ -105,5 +103,18 @@ export class BaseService {
     return model.delete({
       where
     });
+  }
+
+  protected async findMany<T>(
+    model: any,
+    params: {
+      where?: any;
+      include?: any;
+      orderBy?: any;
+      skip?: number;
+      take?: number;
+    }
+  ): Promise<T[]> {
+    return model.findMany(params);
   }
 } 

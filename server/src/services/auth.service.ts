@@ -1,13 +1,11 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { BaseService } from './baseService';
-import { hashPassword, comparePassword, generateToken, verifyToken } from '../utils/auth';
 import { ServiceError, ServiceResponse, CreateUserDto, UserRole } from '../types';
-import { PasswordUtils } from '../utils/password';
-import type { User, Prisma } from '@prisma/client';
 import { prisma } from '../db';
 import type { LoginCredentials } from '../types/auth.types';
 import { AppError } from '../middleware/error.middleware';
+import type { User } from '@prisma/client';
 
 export class AuthService extends BaseService {
   async register(data: LoginCredentials) {
@@ -33,7 +31,7 @@ export class AuthService extends BaseService {
         role: 'user', // 普通用户只能注册为普通角色
         balance: 0,
         credits: 0,
-        memberLevel: 'NORMAL',
+        member_level: 'NORMAL',
         reputation: 100
       }
     });
@@ -62,13 +60,13 @@ export class AuthService extends BaseService {
 
   generateToken(userId: string, role: string) {
     // 管理员账号生成永久令牌，普通用户24小时过期
-    const options = role === 'admin' ? 
+    const options: jwt.SignOptions = role === 'admin' ? 
       {} : // 管理员令牌无过期时间
       { expiresIn: '24h' }; // 普通用户24小时过期
 
     return jwt.sign(
       { userId, role },
-      process.env.JWT_SECRET!,
+      process.env.JWT_SECRET || 'fallback-secret',
       options
     );
   }
@@ -86,52 +84,67 @@ export class AuthService extends BaseService {
     return userWithoutPassword;
   }
 
-  async createUser(data: CreateUserDto): ServiceResponse<PrismaTypes.UserWithRelations> {
+  async createUser(data: CreateUserDto): Promise<ServiceResponse> {
     try {
-      const existingUser = await this.prisma.user.findUnique({
-        where: { email: data.email }
-      });
-
-      if (existingUser) {
-        throw new ServiceError('Email already exists', 400);
-      }
-
-      if (!PasswordUtils.validatePasswordStrength(data.password)) {
-        throw new ServiceError('Password does not meet security requirements', 400);
-      }
-
-      const hashedPassword = await PasswordUtils.hash(data.password);
-      const user = await this.prisma.user.create({
-        data: {
-          ...data,
-          password: hashedPassword,
-          role: UserRole.USER,
-          credits: 0,
-          reputation: 100,
-          memberLevel: 'NORMAL'
-        },
-        include: {
-          profile: true,
-          orders: true,
-          bets: true,
-          cards: true,
-          exchanges: true
+      const existingUser = await prisma.user.findFirst({
+        where: { 
+          username: data.username 
         }
       });
 
-      return { success: true, data: user };
+      if (existingUser) {
+        return { 
+          success: false, 
+          message: '用户名已存在' 
+        };
+      }
+
+      const hashedPassword = await bcrypt.hash(data.password, 10);
+      
+      const user = await prisma.user.create({
+        data: {
+          username: data.username,
+          password: hashedPassword,
+          role: UserRole.USER,
+          balance: 0,
+          credits: 0,
+          member_level: 'NORMAL',
+          reputation: 100
+        }
+      });
+
+      const { password: _, ...userWithoutPassword } = user;
+      
+      return { 
+        success: true, 
+        data: userWithoutPassword,
+        message: '用户创建成功'
+      };
     } catch (error) {
-      if (error instanceof ServiceError) throw error;
-      throw new ServiceError('Failed to create user', 500, error);
+      return { 
+        success: false, 
+        message: '创建用户失败',
+        error: error instanceof Error ? error.message : '未知错误'
+      };
     }
   }
 
   verifyToken(token: string) {
-    return verifyToken(token);
+    try {
+      return jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
+    } catch (error) {
+      throw new AppError('无效的令牌', 401);
+    }
   }
 
   private excludePassword(user: User) {
     const { password, ...userWithoutPassword } = user;
     return userWithoutPassword;
+  }
+
+  async refreshToken(userId: string) {
+    const user = await this.getUserById(userId);
+    const token = this.generateToken(user.id, user.role);
+    return { token, user };
   }
 } 
