@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { message } from 'antd';
 import { userAPI } from '../services/api';
-import { IUser } from '../types';
+import { IUser } from '../../../server/types';
 
 interface AuthContextType {
   user: IUser | null;

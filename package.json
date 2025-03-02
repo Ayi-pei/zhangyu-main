@@ -12,7 +12,10 @@
     "lint": "npm run lint --workspaces"
   },
   "devDependencies": {
+    "@types/bluebird": "^3.5.42",
     "@types/json-schema": "^7.0.15",
+    "@types/mocha": "^10.0.10",
+    "@types/pg": "^8.11.11",
     "@types/semver": "^7.5.8",
     "@types/styled-components": "^5.1.34",
     "@types/stylis": "^4.2.7",
@@ -22,6 +25,7 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "express-rate-limit": "^7.5.0",
     "styled-components": "^6.1.15"
   }
 }

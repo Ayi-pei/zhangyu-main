@@ -1,5 +1,5 @@
 import { Spin } from 'antd';
-import { TableColumn } from '../../types';
+import { TableColumn } from '../../../../server/types';
 
 interface TableProps<T> {
   data: T[];

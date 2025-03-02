@@ -11,4 +11,4 @@ export interface RootState {
       avatar?: string;
     } | null;
   };
-} 
+}
