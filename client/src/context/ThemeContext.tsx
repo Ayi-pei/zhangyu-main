@@ -1,56 +1,54 @@
 // FILEPATH: d:/ayi/zhangyu-main/client/src/context/ThemeContext.tsx
 
-import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import { ConfigProvider, theme } from 'antd';
-import storage from '../utils/storage';
 
-type ThemeMode = 'light' | 'dark';
-
-interface ThemeContextType {
-  themeMode: ThemeMode;
+type ThemeContextType = {
+  themeMode: 'light' | 'dark';
   toggleTheme: () => void;
-}
+};
 
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+const ThemeContext = createContext<ThemeContextType | null>(null);
 
-export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
-    const savedTheme = storage.get('theme') as ThemeMode | null;
-    return savedTheme || 'light';
-  });
-
-  useEffect(() => {
-    storage.set('theme', themeMode);
-    document.body.setAttribute('data-theme', themeMode);
-  }, [themeMode]);
+// 为测试环境提供一个简单版本的 Provider
+export const TestThemeProvider = ({ children }: { children: React.ReactNode }) => {
+  const [themeMode, setThemeMode] = useState<'light' | 'dark'>('light');
 
   const toggleTheme = () => {
-    setThemeMode(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
+    setThemeMode(prev => prev === 'light' ? 'dark' : 'light');
   };
-
-  const { defaultAlgorithm, darkAlgorithm } = theme;
 
   return (
     <ThemeContext.Provider value={{ themeMode, toggleTheme }}>
-      <ConfigProvider
-        theme={{
-          algorithm: themeMode === 'dark' ? darkAlgorithm : defaultAlgorithm,
-          token: {
-            // 自定义主题令牌
-            colorPrimary: '#1890ff',
-            borderRadius: 6,
-          },
-        }}
-      >
+      {children}
+    </ThemeContext.Provider>
+  );
+};
+
+// 生产环境使用的完整版本
+export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
+  const [themeMode, setThemeMode] = useState<'light' | 'dark'>('light');
+
+  const toggleTheme = () => {
+    setThemeMode(prev => prev === 'light' ? 'dark' : 'light');
+  };
+
+  const themeConfig = {
+    algorithm: themeMode === 'dark' ? theme.darkAlgorithm : theme.defaultAlgorithm,
+  };
+
+  return (
+    <ThemeContext.Provider value={{ themeMode, toggleTheme }}>
+      <ConfigProvider theme={themeConfig}>
         {children}
       </ConfigProvider>
     </ThemeContext.Provider>
   );
 };
 
-export const useTheme = (): ThemeContextType => {
+export const useTheme = () => {
   const context = useContext(ThemeContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useTheme must be used within a ThemeProvider');
   }
   return context;

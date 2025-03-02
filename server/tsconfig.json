@@ -1,16 +1,15 @@
 {
+  "extends": "../tsconfig.json",
   "compilerOptions": {
-    "target": "esnext",
-    "module": "commonjs",
-    "lib": ["esnext"],
-    "strict": true,
-    "esModuleInterop": true,
-    "moduleResolution": "node",
-    "baseUrl": "./src",
+    "outDir": "dist",
+    "rootDir": "src",
+    "module": "CommonJS",
+    "types": ["node", "jest"],
+    "baseUrl": ".",
     "paths": {
-      "@utils/*": ["utils/*"]
+      "@/*": ["src/*"]
     }
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "dist"]
 }

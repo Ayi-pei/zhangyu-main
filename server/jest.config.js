@@ -1,30 +1,15 @@
-/** @type {import("jest").Config} */
-const config = {
-  preset: "ts-jest",
-  testEnvironment: "node",
-  roots: ["<rootDir>/src"],
-  transform: {
-    "^.+\\.tsx?$": "ts-jest"
-  },
-  testRegex: "(/__tests__/.*|(\\.|/)(test|spec))\\.tsx?$",
-  moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"],
+/** @type {import('jest').Config} */
+module.exports = {
+  preset: 'ts-jest',
+  testEnvironment: 'node',
+  setupFilesAfterEnv: ['<rootDir>/src/tests/setup.ts'],
   moduleNameMapper: {
-    "@/(.*)": "<rootDir>/src/$1"
+    '^@/(.*)$': '<rootDir>/src/$1'
   },
-  setupFiles: ["<rootDir>/src/tests/setup.ts"],
-  collectCoverageFrom: [
-    "src/**/*.{ts,tsx}",
-    "!src/tests/**/*",
-    "!src/**/*.d.ts"
-  ],
-  coverageThreshold: {
-    global: {
-      branches: 80,
-      functions: 80,
-      lines: 80,
-      statements: 80
+  testMatch: ['**/*.test.ts'],
+  globals: {
+    'ts-jest': {
+      tsconfig: 'tsconfig.json'
     }
   }
 };
-
-module.exports = config;

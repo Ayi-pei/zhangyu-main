@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { fetchUserDetails, updateUserDetails } from "../api/admin";
+import { fetchUserDetails, updateUserDetails } from "../components/AdminUserEdit";
 
 const AdminEditPlayer = () => {
   const { userId } = useParams();

@@ -1,52 +1,36 @@
-import { Spin } from 'antd';
-import { TableColumn } from '../../../../server/types';
+import React from 'react';
+import { Table as AntTable } from 'antd';
+import type { TableProps } from 'antd';
 
-interface TableProps<T> {
-  data: T[];
-  columns: TableColumn<T>[];
+export interface CustomTableProps<T> extends TableProps<T> {
   loading?: boolean;
+  error?: string;
+  columns: Array<{
+    title: string;
+    dataIndex: keyof T;
+    key: string;
+    render?: (text: any, record: T) => React.ReactNode;
+  }>;
 }
 
-export const Table = <T extends {}>({ data, columns, loading }: TableProps<T>) => {
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-32">
-        <Spin />
-      </div>
-    );
+export const Table = <T extends object>({ 
+  loading,
+  error,
+  columns,
+  ...props 
+}: CustomTableProps<T>) => {
+  if (error) {
+    return <div className="text-red-500">{error}</div>;
   }
 
   return (
-    <table className="min-w-full divide-y divide-gray-200">
-      <thead className="bg-gray-50">
-        <tr>
-          {columns.map((column, index) => (
-            <th
-              key={index}
-              scope="col"
-              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-            >
-              {column.header}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody className="bg-white divide-y divide-gray-200">
-        {data.map((item, rowIndex) => (
-          <tr key={rowIndex}>
-            {columns.map((column, colIndex) => (
-              <td
-                key={colIndex}
-                className="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
-              >
-                {column.cell
-                  ? column.cell(item)
-                  : (item as any)[column.accessor]}
-              </td>
-            ))}
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <AntTable<T>
+      loading={loading}
+      columns={columns}
+      {...props}
+      className="w-full"
+    />
   );
-}; 
+};
+
+export default Table; 

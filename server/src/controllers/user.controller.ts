@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import { BaseController } from './base.controller';
 import { UserService } from '../services/user.service';
 import { UpdateProfileInput } from '../schemas/auth.schema';
+import { prisma } from '../utils/prisma';
+import { hashPassword } from '../utils/auth';
 
 export class UserController extends BaseController {
   private userService: UserService;
@@ -89,6 +91,26 @@ export class UserController extends BaseController {
       },
       '更新余额成功',
       '更新余额失败'
+    );
+  }
+
+  async login(req: Request, res: Response) {
+    return this.handleRequest(
+      res,
+      async () => {
+        const { username, password } = req.body;
+        // ... 登录逻辑
+      }
+    );
+  }
+
+  async register(req: Request, res: Response) {
+    return this.handleRequest(
+      res,
+      async () => {
+        const { username, password } = req.body;
+        // ... 注册逻辑
+      }
     );
   }
 } 

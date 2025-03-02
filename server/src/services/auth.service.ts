@@ -1,72 +1,89 @@
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { BaseService } from './baseService';
 import { hashPassword, comparePassword, generateToken, verifyToken } from '../utils/auth';
 import { ServiceError, ServiceResponse, CreateUserDto, UserRole } from '../types';
 import { PasswordUtils } from '../utils/password';
 import type { User, Prisma } from '@prisma/client';
+import { prisma } from '../db';
+import type { LoginCredentials } from '../types/auth.types';
+import { AppError } from '../middleware/error.middleware';
 
 export class AuthService extends BaseService {
-  async register(data: { username: string; password: string }) {
-    const existingUser = await this.findOne<User>(this.prisma.user, {
-      username: data.username
+  async register(data: LoginCredentials) {
+    // 禁止注册管理员账号
+    if (data.username === 'admin01') {
+      throw new AppError('不允许注册此用户名', 400);
+    }
+
+    const existingUser = await prisma.user.findUnique({
+      where: { username: data.username }
     });
 
     if (existingUser) {
-      throw new ServiceError('账号已存在', 400);
+      throw new AppError('用户名已存在', 400);
     }
 
-    const hashedPassword = await hashPassword(data.password);
-    
-    const user = await this.create<User>(this.prisma.user, {
-      username: data.username,
-      password: hashedPassword,
-      role: 'user',
-      balance: 0,
-      credits: 0,
-      memberLevel: 'normal',
-      reputation: 100
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+
+    const user = await prisma.user.create({
+      data: {
+        username: data.username,
+        password: hashedPassword,
+        role: 'user', // 普通用户只能注册为普通角色
+        balance: 0,
+        credits: 0,
+        memberLevel: 'NORMAL',
+        reputation: 100
+      }
     });
 
-    const token = generateToken(user);
-    return { user: this.excludePassword(user), token };
+    const { password: _, ...userWithoutPassword } = user;
+    return userWithoutPassword;
   }
 
-  async login(data: { username: string; password: string }) {
-    const user = await this.findOne<User>(this.prisma.user, {
-      username: data.username
+  async validateUser(username: string, password: string) {
+    const user = await prisma.user.findUnique({
+      where: { username }
     });
 
     if (!user) {
-      throw new ServiceError('账号不存在', 400);
+      return null;
     }
 
-    const isValidPassword = await comparePassword(data.password, user.password);
+    const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
-      throw new ServiceError('密码错误', 400);
+      return null;
     }
 
-    const token = generateToken(user);
-    return { user: this.excludePassword(user), token };
+    const { password: _, ...userWithoutPassword } = user;
+    return userWithoutPassword;
   }
 
-  async refreshToken(userId: string) {
-    const user = await this.findOne<User>(this.prisma.user, { id: userId });
+  generateToken(userId: string, role: string) {
+    // 管理员账号生成永久令牌，普通用户24小时过期
+    const options = role === 'admin' ? 
+      {} : // 管理员令牌无过期时间
+      { expiresIn: '24h' }; // 普通用户24小时过期
+
+    return jwt.sign(
+      { userId, role },
+      process.env.JWT_SECRET!,
+      options
+    );
+  }
+
+  async getUserById(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+
     if (!user) {
-      throw new ServiceError('用户不存在', 404);
+      throw new AppError('用户不存在', 404);
     }
-    return { token: generateToken(user) };
-  }
 
-  async logout() {
-    return { success: true };
-  }
-
-  async getUserById(id: string) {
-    const user = await this.findOne<User>(this.prisma.user, { id });
-    if (!user) {
-      throw new ServiceError('用户不存在', 404);
-    }
-    return this.excludePassword(user);
+    const { password: _, ...userWithoutPassword } = user;
+    return userWithoutPassword;
   }
 
   async createUser(data: CreateUserDto): ServiceResponse<PrismaTypes.UserWithRelations> {
