@@ -1,50 +1,62 @@
-import React, { useState, useCallback } from "react";
-import * as api from "../api/uresApi";
+// FILEPATH: d:/ayi/zhangyu-main/client/src/components/RechargeForm.tsx
 
-const RechargeForm: React.FC = () => {
-  const [amount, setAmount] = useState<number>(0);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+import React from 'react';
+import { Form, Input, Button, message } from 'antd';
+import { userAPI } from '../services/api';
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (amount <= 0) {
-      setError("请输入有效的充值金额");
-      return;
-    }
-    setIsLoading(true);
-    setError(null);
+interface RechargeFormValues {
+  amount: number;
+  paymentMethod: string;
+}
+
+export const RechargeForm: React.FC = () => {
+  const [form] = Form.useForm<RechargeFormValues>();
+  const [loading, setLoading] = React.useState(false);
+
+  const onFinish = async (values: RechargeFormValues) => {
+    setLoading(true);
     try {
-      // 使用新的 recharge 方法
-      const res = await api.recharge("当前用户ID", amount);
-      alert(`充值成功！金额: ${amount}`);
-    } catch (err) {
-      setError("充值失败，请稍后再试");
+      await userAPI.recharge(values);
+      message.success('充值申请已提交');
+      form.resetFields();
+    } catch (error) {
+      message.error('充值失败');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  }, [amount]);
+  };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h2>充值积分</h2>
-      <label htmlFor="amount">充值金额：</label>
-      <input 
-        id="amount"
-        type="number" 
-        value={amount} 
-        onChange={(e) => setAmount(Number(e.target.value))}
-        min="0"
-        step="1"
-        required
-        placeholder="请输入充值金额"
-      />
-      {error && <p className="error-message">{error}</p>}
-      <button type="submit" disabled={isLoading}>
-        {isLoading ? '处理中...' : '提交充值订单'}
-      </button>
-    </form>
+    <Form<RechargeFormValues>
+      form={form}
+      onFinish={onFinish}
+      layout="vertical"
+      className="max-w-md mx-auto"
+    >
+      <Form.Item
+        label="充值金额"
+        name="amount"
+        rules={[
+          { required: true, message: '请输入充值金额' },
+          { type: 'number', min: 1, message: '充值金额必须大于0' }
+        ]}
+      >
+        <Input type="number" placeholder="请输入充值金额" />
+      </Form.Item>
+
+      <Form.Item
+        label="支付方式"
+        name="paymentMethod"
+        rules={[{ required: true, message: '请选择支付方式' }]}
+      >
+        <Input placeholder="请选择支付方式" />
+      </Form.Item>
+
+      <Form.Item>
+        <Button type="primary" htmlType="submit" loading={loading} block>
+          确认充值
+        </Button>
+      </Form.Item>
+    </Form>
   );
 };
-
-export default RechargeForm;

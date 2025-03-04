@@ -1,0 +1,23 @@
+.theme-transition {
+  transition: all 0.3s ease;
+}
+
+.theme-light {
+  --primary-color: #8c52ff;
+  --secondary-color: #ff914d;
+  /* ... 其他变量 */
+}
+
+.theme-dark {
+  --primary-color: #bb86fc;
+  --secondary-color: #03dac6;
+  /* ... 其他变量 */
+}
+
+/* ... 其他主题 */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+  }
+} 

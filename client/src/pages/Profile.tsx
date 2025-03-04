@@ -1,246 +1,459 @@
-import React, { useState } from 'react';
-import { ArrowLeft, MessageCircle, RefreshCw, History, LogOut, X } from 'lucide-react';
+// FILEPATH: d:/ayi/zhangyu-main/client/src/pages/Profile.tsx
+
+import React, { useEffect, useState } from 'react';
+import { useSelector } from 'react-redux';
+import { userAPI } from '../services/api';
+import { RootState } from '../store/types';
+import { ArrowLeft, MessageCircle, RefreshCw, History, LogOut, Star, Shield, Award } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import BottomNav from '../components/BottomNav';
-import SupportDialog from '../components/SupportDialog';
-import { useUser } from "../context/UserContext";
+import { message, Spin, Card, Tabs, Table, Button, Modal, Form, Input, Tag, Drawer } from 'antd';
+import './Profile.css';
+import { useTheme } from '../theme/ThemeContext';
+import { useAuth } from '../context/AuthContext';
+import axios from 'axios';
 
-function Profile() {
+interface UserLevel {
+  level: 1 | 2 | 3 | 4;
+  title: string;
+  color: string;
+}
+
+const LEVEL_CONFIG: Record<number, { title: string; color: string; stars: number }> = {
+  1: { title: '初级会员', color: '#808080', stars: 1 },
+  2: { title: '黄金会员', color: '#FFD700', stars: 1 },
+  3: { title: '白金会员', color: '#FFD700', stars: 2 },
+  4: { title: '钻石会员', color: '#FFD700', stars: 3 }
+};
+
+interface Transaction {
+  id: string;
+  type: 'betting' | 'recharge' | 'withdraw';
+  amount: number;
+  status: 'success' | 'pending' | 'failed';
+  createdAt: string;
+  description: string;
+}
+
+interface BankCard {
+  id: string;
+  bankName: string;
+  cardNumber: string;
+  holderName: string;
+  exchangeCode?: string; // 6位数字兑换码
+}
+
+export const Profile: React.FC = () => {
+  const { user, logout } = useAuth();
+  const [userStats, setUserStats] = useState({
+    totalGames: 0,
+    winRate: 0,
+    totalWinnings: 0
+  });
+  const [showSupport, setShowSupport] = useState(false);
+  const [balance, setBalance] = useState(0);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [bankCards, setBankCards] = useState<BankCard[]>([]);
+  const [isRechargeModalVisible, setIsRechargeModalVisible] = useState(false);
+  const [isWithdrawModalVisible, setIsWithdrawModalVisible] = useState(false);
+  const [isBindCardModalVisible, setIsBindCardModalVisible] = useState(false);
+  const [isSupportDrawerVisible, setIsSupportDrawerVisible] = useState(false);
+  const [form] = Form.useForm();
   const navigate = useNavigate();
-  const { user } = useUser();
+  const { colors, theme, setTheme } = useTheme();
 
-  // 从 localStorage 获取游戏跳跃历史和当前余额（建议后续从后端获取）
-  const jumpHistory = JSON.parse(localStorage.getItem('jumpHistory') || '[]');
-  const currentBalance = parseInt(localStorage.getItem('playerBalance') || '1000');
-  const gamesPlayed = jumpHistory.length;
+  useEffect(() => {
+    if (user) {
+      fetchUserStats();
+      fetchUserData();
+    }
+  }, [user]);
 
-  // 用户头像和登录账号
-  const [selectedAvatar, setSelectedAvatar] = useState<string>(
-    localStorage.getItem('avatar') || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80'
-  );
-  // 登录账号（昵称）从 user 对象中获取，若不存在则使用 localStorage 中保存的
-  const loginAccount = user?.name || localStorage.getItem('loginAccount') || '플레이어:001';
-  const [password, setPassword] = useState<string>('');
-
-  const menuItems = [
-    { icon: <History className="w-6 h-6" />, label: '이력 참여 횟수', value: gamesPlayed, action: () => navigate('/game-history') },
-    { icon: <RefreshCw className="w-6 h-6" />, label: '충전 보충', action: () => setShowRechargeDialog(true) },
-    { icon: <MessageCircle className="w-6 h-6" />, label: '고객 지원', action: () => navigate('/customer-support') },
-    { icon: <LogOut className="w-6 h-6" />, label: '종료 후퇴', action: () => navigate('/') },
-  ];
-
-  const [error, setError] = useState(''); // 错误消息
-  const [showRechargeDialog, setShowRechargeDialog] = useState(false);
-  const [jumpHistoryDialog, setJumpHistoryDialog] = useState(false);
-  const [isSupportDialogOpen, setIsSupportDialogOpen] = useState(false); // 支持对话框
-
-  const handleRechargeConfirm = () => {
-    setShowRechargeDialog(false);
-    window.open('https://example.com/recharge', '_blank');
-  };
-
-  const handleHistoryClick = () => {
-    setJumpHistoryDialog(true);
-  };
-
-  // 打开支持对话框
-  const handleOpenSupportDialog = () => {
-    setIsSupportDialogOpen(true);
-  };
-
-  // 处理头像更换
-  const handleAvatarChange = (newAvatar: string) => {
-    setSelectedAvatar(newAvatar);
-    localStorage.setItem('avatar', newAvatar);
-  };
-
-  // 处理密码更改（确保最多8个字符）
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newPassword = e.target.value;
-    if (newPassword.length <= 8) {
-      setPassword(newPassword);
+  const fetchUserStats = async () => {
+    try {
+      const response = await userAPI.getUserStats();
+      setUserStats(response.data);
+    } catch (error) {
+      console.error('获取用户统计信息失败:', error);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-[#8c52ff] to-[#ff914d] pb-16 relative">
-      {/* Header */}
-      <div className="bg-blue-600 text-white p-4 rounded-b-lg">
-        <button
-          onClick={() => navigate('/')}
-          className="flex items-center gap-2 mb-4 hover:text-blue-200 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          뒤로 가기
-        </button>
+  const fetchUserData = async () => {
+    try {
+      const [balanceRes, transactionsRes, cardsRes] = await Promise.all([
+        axios.get('/api/user/balance'),
+        axios.get('/api/user/transactions'),
+        axios.get('/api/user/bank-cards')
+      ]);
+      
+      setBalance(balanceRes.data.balance);
+      setTransactions(transactionsRes.data);
+      setBankCards(cardsRes.data);
+    } catch (error) {
+      message.error('获取用户数据失败');
+    }
+  };
 
-        <div className="flex items-center gap-4 mt-4">
-          <img
-            src={selectedAvatar}
-            alt="Avatar"
-            className="w-16 h-16 rounded-full border-2 border-white"
-          />
-          <div>
-            <h2 className="text-xl font-bold">{loginAccount}</h2>
-            <div className="flex gap-4 mt-2 text-sm">
-              <span>현재 잔액：{currentBalance}</span>
-              {user ? (
-                <>
-                  <span>신용점수: {user.creditRating ?? '--'}</span>
-                  <span>회원 등급: {user.membershipLevel ?? '--'}</span>
-                </>
-              ) : (
-                <>
-                  <span>신용점수: --</span>
-                  <span>회원 등급: --</span>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    logout();
+    navigate('/login');
+  };
 
-      {/* Avatar Selection */}
-      <div className="p-4">
-        <h3 className="text-lg font-semibold mb-2">기본 아바타 선택</h3>
-        <div className="grid grid-cols-5 gap-4">
-          {[
-            'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80',
-            'https://images.unsplash.com/photo-1607572303-51f5973ffb50?w=200&auto=format&fit=crop&q=80',
-            'https://images.unsplash.com/photo-1604071654067-c582b1b4d1e1?w=200&auto=format&fit=crop&q=80',
-            'https://images.unsplash.com/photo-1604119029705-dc9a6226c5ea?w=200&auto=format&fit=crop&q=80',
-            'https://images.unsplash.com/photo-1603994947895-e3c9fa80d285?w=200&auto=format&fit=crop&q=80',
-            'https://images.unsplash.com/photo-1616583187655-eebefac6c82c?w=200&auto=format&fit=crop&q=80',
-            'https://images.unsplash.com/photo-1573159263907-45c4a5ad8d37?w=200&auto=format&fit=crop&q=80',
-            'https://images.unsplash.com/photo-1586843278500-cb6dbd0c4aab?w=200&auto=format&fit=crop&q=80',
-            'https://images.unsplash.com/photo-1604891159634-6ee022836179?w=200&auto=format&fit=crop&q=80',
-            'https://images.unsplash.com/photo-1603148302158-1d00a12289b3?w=200&auto=format&fit=crop&q=80'
-          ].map((avatar, index) => (
-            <img
-              key={index}
-              src={avatar}
-              alt={`Avatar ${index + 1}`}
-              className="w-12 h-12 rounded-full cursor-pointer"
-              onClick={() => handleAvatarChange(avatar)}
-            />
+  const renderStars = (level: number) => {
+    const config = LEVEL_CONFIG[level as keyof typeof LEVEL_CONFIG];
+    return Array(config.stars).fill(0).map((_, i) => (
+      <Star 
+        key={i}
+        fill={config.color}
+        stroke={config.color}
+        className="w-6 h-6"
+      />
+    ));
+  };
+
+  const getCreditScoreColor = (score: number) => {
+    if (score >= 90) return 'text-green-500';
+    if (score >= 70) return 'text-yellow-500';
+    return 'text-red-500';
+  };
+
+  const handleRecharge = async (values: any) => {
+    try {
+      await axios.post('/api/user/recharge', values);
+      message.success('充值申请已提交');
+      setIsRechargeModalVisible(false);
+      fetchUserData();
+    } catch (error) {
+      message.error('充值失败');
+    }
+  };
+
+  const handleWithdraw = async (values: any) => {
+    try {
+      await axios.post('/api/user/withdraw', values);
+      message.success('提现申请已提交');
+      setIsWithdrawModalVisible(false);
+      fetchUserData();
+    } catch (error) {
+      message.error('提现失败');
+    }
+  };
+
+  const handleBindCard = async (values: any) => {
+    try {
+      // 检查是否是首次绑卡
+      const isFirstCard = bankCards.length === 0;
+      
+      if (isFirstCard && !values.exchangeCode) {
+        message.error('首次绑卡需要设置游戏积分兑换码');
+        return;
+      }
+
+      await axios.post('/api/user/bind-card', {
+        ...values,
+        exchangeCode: isFirstCard ? values.exchangeCode : undefined
+      });
+      message.success('银行卡绑定成功');
+      setIsBindCardModalVisible(false);
+      fetchUserData();
+    } catch (error) {
+      message.error('银行卡绑定失败');
+    }
+  };
+
+  const transactionColumns = [
+    {
+      title: '类型',
+      dataIndex: 'type',
+      key: 'type',
+      render: (type: string) => {
+        const typeMap = {
+          betting: '投注',
+          recharge: '充值',
+          withdraw: '提现'
+        };
+        return typeMap[type as keyof typeof typeMap];
+      }
+    },
+    {
+      title: '金额',
+      dataIndex: 'amount',
+      key: 'amount',
+      render: (amount: number) => `¥${amount.toFixed(2)}`
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status: string) => {
+        const statusMap = {
+          success: <Tag color="success">成功</Tag>,
+          pending: <Tag color="processing">处理中</Tag>,
+          failed: <Tag color="error">失败</Tag>
+        };
+        return statusMap[status as keyof typeof statusMap];
+      }
+    },
+    {
+      title: '时间',
+      dataIndex: 'createdAt',
+      key: 'createdAt'
+    },
+    {
+      title: '说明',
+      dataIndex: 'description',
+      key: 'description'
+    }
+  ];
+
+  const items = [
+    {
+      key: '1',
+      label: '交易明细',
+      children: (
+        <Table
+          columns={transactionColumns}
+          dataSource={transactions}
+          rowKey="id"
+          pagination={{ pageSize: 10 }}
+        />
+      )
+    },
+    {
+      key: '2',
+      label: '银行卡',
+      children: (
+        <div>
+          {bankCards.map(card => (
+            <Card key={card.id} className="mb-4">
+              <p>开户行：{card.bankName}</p>
+              <p>卡号：{card.cardNumber}</p>
+              <p>持卡人：{card.holderName}</p>
+            </Card>
           ))}
+          <Button type="primary" onClick={() => setIsBindCardModalVisible(true)}>
+            绑定新卡
+          </Button>
         </div>
+      )
+    }
+  ];
+
+  const themeOptions = [
+    { value: 'light', label: '明亮' },
+    { value: 'dark', label: '暗黑' },
+    { value: 'business', label: '商务' },
+    { value: 'soft', label: '柔和' }
+  ];
+
+  if (!user) {
+    return <Spin className="profile-spinner" />;
+  }
+
+  return (
+    <div 
+      className="container mx-auto px-4 py-8"
+      style={{ backgroundColor: colors.background, color: colors.text }}
+    >
+      <div className="mb-4">
+        <select
+          value={theme}
+          onChange={(e) => setTheme(e.target.value as any)}
+          className="theme-select"
+          style={{
+            backgroundColor: colors.surface,
+            color: colors.text,
+            borderColor: colors.border
+          }}
+        >
+          {themeOptions.map(option => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
       </div>
 
-      {/* Account Settings (仅显示，不可更改登录账号) */}
-      <div className="p-4">
-        <h3 className="text-lg font-semibold mb-2">계정 설정</h3>
-        <div className="space-y-4">
+      <Card className="mb-6">
+        <div className="flex justify-between items-center mb-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">사용자 이름 (ID)</label>
-            <input
-              type="text" aria-label="Game input"
-              value={loginAccount}
-              className="w-full p-3 rounded-lg border border-gray-300 bg-gray-100 cursor-not-allowed"
-              disabled
-            />
+            <h2 className="text-2xl font-bold">个人中心</h2>
+            <p className="text-gray-600">ID：{user?.id}</p>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">비밀번호 (8자 이상)</label>
-            <input
-              type="password" aria-label="Index input"
-              value={password}
-              onChange={handlePasswordChange}
-              className="w-full p-3 rounded-lg border border-gray-300"
-              maxLength={8}
-            />
-          </div>
+          <Button type="link" onClick={() => logout()}>退出登录</Button>
         </div>
-      </div>
 
-      {/* Menu List */}
-      <div className="p-4 space-y-4">
-        {menuItems.map((item, index) => (
-          <button
-            key={index}
-            onClick={() => item.action && item.action()}
-            className="w-full bg-white rounded-lg p-4 flex items-center justify-between shadow-sm transition-all hover:bg-gray-200 transform hover:scale-105"
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <Card>
+            <div className="text-center">
+              <p className="text-gray-600">账户余额</p>
+              <p className="text-2xl font-bold">¥{balance.toFixed(2)}</p>
+              <div className="mt-4 space-x-4">
+                <Button type="primary" onClick={() => setIsRechargeModalVisible(true)}>
+                  充值
+                </Button>
+                <Button onClick={() => setIsWithdrawModalVisible(true)}>
+                  提现
+                </Button>
+              </div>
+            </div>
+          </Card>
+          <Card>
+            <div className="text-center">
+              <p className="text-gray-600">会员等级</p>
+              <p className="text-2xl font-bold">VIP 1</p>
+              <p className="text-gray-600 mt-2">信誉分：85</p>
+            </div>
+          </Card>
+        </div>
+
+        <Button 
+          type="link" 
+          className="mb-4"
+          onClick={() => setIsSupportDrawerVisible(true)}
+        >
+          联系客服
+        </Button>
+
+        <Tabs items={items} />
+      </Card>
+
+      {/* 充值弹窗 */}
+      <Modal
+        title="充值"
+        open={isRechargeModalVisible}
+        onCancel={() => setIsRechargeModalVisible(false)}
+        footer={null}
+      >
+        <Form form={form} onFinish={handleRecharge}>
+          <Form.Item
+            name="amount"
+            label="充值金额"
+            rules={[{ required: true, message: '请输入充值金额' }]}
           >
-            <div className="flex items-center gap-3">
-              {item.icon}
-              <span className="text-gray-800">{item.label}</span>
-            </div>
-            {item.value !== undefined && (
-              <span className="text-gray-600">{item.value}</span>
-            )}
-          </button>
-        ))}
-      </div>
+            <Input type="number" prefix="¥" />
+          </Form.Item>
+          <Form.Item>
+            <Button type="primary" htmlType="submit" block>
+              确认充值
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
 
-      {/* Recharge Dialog */}
-      {showRechargeDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-80">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">충전 보충 안내</h3>
-              <button
-                onClick={() => setShowRechargeDialog(false)}
-                className="text-gray-500 hover:text-gray-700"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <p className="mb-4">
-              충전 보충 관련 안내 메시지입니다. 아래 링크를 클릭하시면 충전 페이지로 이동합니다.
-            </p>
-            <a
-              href="https://example.com/recharge"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 underline"
+      {/* 绑定银行卡弹窗 */}
+      <Modal
+        title="绑定银行卡"
+        open={isBindCardModalVisible}
+        onCancel={() => setIsBindCardModalVisible(false)}
+        footer={null}
+      >
+        <Form form={form} onFinish={handleBindCard}>
+          <Form.Item
+            name="bankName"
+            label="开户行"
+            rules={[{ required: true, message: '请输入开户行' }]}
+          >
+            <Input />
+          </Form.Item>
+          <Form.Item
+            name="cardNumber"
+            label="卡号"
+            rules={[{ required: true, message: '请输入卡号' }]}
+          >
+            <Input />
+          </Form.Item>
+          <Form.Item
+            name="holderName"
+            label="持卡人"
+            rules={[{ required: true, message: '请输入持卡人姓名' }]}
+          >
+            <Input />
+          </Form.Item>
+          {bankCards.length === 0 && (
+            <Form.Item
+              name="exchangeCode"
+              label="积分兑换码"
+              rules={[
+                { required: true, message: '请输入6位数字兑换码' },
+                { pattern: /^\d{6}$/, message: '兑换码必须是6位数字' }
+              ]}
+              extra="首次绑卡需要设置6位数字兑换码，用于提现时的安全验证"
             >
-              충전 페이지 바로가기
-            </a>
-            <div className="mt-4 text-center">
-              <button
-                onClick={handleRechargeConfirm}
-                className="bg-blue-600 text-white py-2 px-4 rounded-lg w-full"
-              >
-                확인
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+              <Input placeholder="请输入6位数字兑换码" maxLength={6} />
+            </Form.Item>
+          )}
+          <Form.Item>
+            <Button type="primary" htmlType="submit" block>
+              确认绑定
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
 
-      {/* Jump History Dialog */}
-      {jumpHistoryDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-80">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">게임 이력</h3>
-              <button
-                onClick={() => setJumpHistoryDialog(false)}
-                className="text-gray-500 hover:text-gray-700"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="space-y-2">
-              {jumpHistory.map((game, index) => (
-                <div key={index} className="flex justify-between">
-                  <span>{game.date}</span>
-                  <span className={game.result === 'win' ? 'text-green-600' : 'text-red-600'}>
-                    {game.result === 'win' ? '승리' : '패배'}
-                  </span>
-                </div>
+      {/* 提现弹窗 */}
+      <Modal
+        title="提现"
+        open={isWithdrawModalVisible}
+        onCancel={() => setIsWithdrawModalVisible(false)}
+        footer={null}
+      >
+        <Form form={form} onFinish={handleWithdraw}>
+          <Form.Item
+            name="amount"
+            label="提现金额"
+            rules={[{ required: true, message: '请输入提现金额' }]}
+          >
+            <Input type="number" prefix="¥" />
+          </Form.Item>
+          <Form.Item
+            name="cardId"
+            label="选择银行卡"
+            rules={[{ required: true, message: '请选择银行卡' }]}
+          >
+            <select className="w-full border p-2 rounded">
+              {bankCards.map(card => (
+                <option key={card.id} value={card.id}>
+                  {card.bankName} - {card.cardNumber}
+                </option>
               ))}
-            </div>
-          </div>
-        </div>
-      )}
+            </select>
+          </Form.Item>
+          <Form.Item
+            name="exchangeCode"
+            label="积分兑换码"
+            rules={[
+              { required: true, message: '请输入积分兑换码' },
+              { pattern: /^\d{6}$/, message: '兑换码必须是6位数字' }
+            ]}
+          >
+            <Input placeholder="请输入6位数字兑换码" maxLength={6} />
+          </Form.Item>
+          <Form.Item>
+            <Button type="primary" htmlType="submit" block>
+              确认提现
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
 
-      {/* Bottom Navigation */}
-      <BottomNav />
+      {/* 客服抽屉 */}
+      <Drawer
+        title="联系客服"
+        placement="right"
+        onClose={() => setIsSupportDrawerVisible(false)}
+        open={isSupportDrawerVisible}
+      >
+        <div className="space-y-4">
+          <p>客服热线：400-888-8888</p>
+          <p>服务时间：09:00 - 21:00</p>
+          <p>QQ客服：123456789</p>
+          <p>微信客服：zhangyu-service</p>
+        </div>
+      </Drawer>
     </div>
   );
-}
+};
 
 export default Profile;
+
