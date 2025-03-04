@@ -1,11 +1,18 @@
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App";
+import { ThemeProvider } from "./context/ThemeContext";
+import { UserProvider } from "./context/UserContext";
+import { SettingsProvider } from "./context/SettingsContext";
 
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import AppRouter from './AppRouter';
-import './index.css';
-
-ReactDOM.createRoot(document.getElementById('root')!).render(
-    <React.StrictMode>
-        <AppRouter />
-    </React.StrictMode>
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <React.StrictMode>
+    <ThemeProvider>
+      <UserProvider>
+        <SettingsProvider>
+          <App />
+        </SettingsProvider>
+      </UserProvider>
+    </ThemeProvider>
+  </React.StrictMode>
 );

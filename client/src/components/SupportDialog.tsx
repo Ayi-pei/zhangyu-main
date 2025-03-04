@@ -1,90 +1,147 @@
-// FILEPATH: d:/ayi/zhangyu-main/client/src/components/SupportDialog.tsx
-
-import React from 'react';
-import styled from 'styled-components';
-import { useTheme } from '../context/ThemeContext';
-
-interface ThemeProps {
-  $themeMode: 'light' | 'dark';
-}
-
-const DialogContainer = styled.div<ThemeProps>`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: rgba(0, 0, 0, 0.5);
-  z-index: 1000;
-`;
-
-const DialogContent = styled.div<ThemeProps>`
-  background: ${props => props.$themeMode === 'dark' ? '#1f1f1f' : '#ffffff'};
-  padding: 2rem;
-  border-radius: 8px;
-  max-width: 500px;
-  width: 90%;
-`;
-
-const DialogHeader = styled.div<ThemeProps>`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-  color: ${props => props.$themeMode === 'dark' ? '#ffffff' : '#000000'};
-`;
-
-const DialogBody = styled.div<ThemeProps>`
-  margin-bottom: 1.5rem;
-  color: ${props => props.$themeMode === 'dark' ? '#cccccc' : '#333333'};
-`;
-
-const DialogFooter = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-`;
-
-const Button = styled.button<ThemeProps & { $primary?: boolean }>`
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  border: none;
-  cursor: pointer;
-  background: ${props => props.$primary ? '#1890ff' : props.$themeMode === 'dark' ? '#333333' : '#f0f0f0'};
-  color: ${props => props.$primary ? '#ffffff' : props.$themeMode === 'dark' ? '#ffffff' : '#000000'};
-
-  &:hover {
-    opacity: 0.8;
-  }
-`;
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { X, Send, MessageSquare, ArrowLeft } from 'lucide-react';
+import './SupportDialog.css';
 
 interface SupportDialogProps {
   onClose: () => void;
 }
 
-export const SupportDialog: React.FC<SupportDialogProps> = ({ onClose }) => {
-  const { themeMode } = useTheme();
+interface Message {
+  sender: 'user' | 'support';
+  text: string;
+}
+
+const SupportDialog: React.FC<SupportDialogProps> = ({ onClose }) => {
+  const navigate = useNavigate();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [messageText, setMessageText] = useState('');
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
+
+  useEffect(() => {
+    // 获取二维码 URL
+    fetch('/api/qrcode')
+      .then(response => response.json())
+      .then(data => setQrCodeUrl(data.qrCodeUrl))
+      .catch(error => console.error('Error fetching QR code:', error));
+  }, []);
+
+  const handleSendMessage = () => {
+    if (messageText.trim()) {
+      setMessages(prev => [...prev, { sender: 'user', text: messageText.trim() }]);
+      setMessageText('');
+    }
+  };
+
+  const handleSimulateResponse = () => {
+    setMessages(prev => [
+      ...prev,
+      { sender: 'support', text: '안녕하세요, 무엇을 도와드릴까요?' }
+    ]);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
 
   return (
-    <DialogContainer $themeMode={themeMode}>
-      <DialogContent $themeMode={themeMode}>
-        <DialogHeader $themeMode={themeMode}>
-          <h2>客服支持</h2>
-          <Button $themeMode={themeMode} onClick={onClose}>×</Button>
-        </DialogHeader>
-        <DialogBody $themeMode={themeMode}>
-          <p>客服热线：400-xxx-xxxx</p>
-          <p>在线时间：9:00-22:00</p>
-          <p>邮箱：support@example.com</p>
-        </DialogBody>
-        <DialogFooter>
-          <Button $themeMode={themeMode} onClick={onClose}>取消</Button>
-          <Button $primary $themeMode={themeMode} onClick={onClose}>确定</Button>
-        </DialogFooter>
-      </DialogContent>
-    </DialogContainer>
+    <div className="support-dialog-container">
+      <button
+        type="button"
+        onClick={() => navigate('/profile')}
+        className="back-button"
+      >
+        <ArrowLeft className="w-5 h-5" />
+        <span>返回个人中心</span>
+      </button>
+
+      <div className="support-dialog-card">
+        <div className="dialog-header">
+          <h3 className="dialog-title">联系客服</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="close-button"
+            aria-label="关闭对话"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="messages-container">
+          {messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-gray-400">
+              <MessageSquare className="w-12 h-12 mb-2" />
+              <p>暂无消息</p>
+            </div>
+          ) : (
+            messages.map((message, index) => (
+              <div
+                key={index}
+                className={`message ${message.sender === 'user' ? 'user-message' : 'support-message'}`}
+              >
+                {message.text}
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="input-container">
+          <input
+            type="text"
+            value={messageText}
+            onChange={(e) => setMessageText(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="输入消息..."
+            className="message-input"
+          />
+          <div className="action-buttons">
+            <button
+              type="button"
+              onClick={handleSendMessage}
+              className="action-button send-button"
+              disabled={!messageText.trim()}
+              aria-label="发送消息"
+            >
+              <Send className="w-5 h-5" />
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSimulateResponse}
+              className="action-button simulate-button"
+            >
+              获取消息
+            </button>
+          </div>
+        </div>
+
+        {/* 社交媒体链接 */}
+        <div className="social-links">
+          <h4 className="text-lg font-bold mt-6">联系我们</h4>
+          <div className="flex justify-center gap-4 mt-2">
+            <a href="https://www.example.com/facebook" target="_blank" rel="noopener noreferrer" className="social-link">
+              Facebook
+            </a>
+            <a href="https://www.example.com/whatsapp" target="_blank" rel="noopener noreferrer" className="social-link">
+              WhatsApp
+            </a>
+          </div>
+        </div>
+
+        {/* 显示二维码 */}
+        {qrCodeUrl && (
+          <div className="qr-code-container mt-4">
+            <h4 className="text-lg font-bold">扫描二维码联系客服</h4>
+            <img src={qrCodeUrl} alt="QR Code" className="qr-code-image" />
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
+
+export default SupportDialog;
