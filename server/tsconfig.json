@@ -1,15 +1,19 @@
 {
-  "extends": "../tsconfig.json",
   "compilerOptions": {
-    "outDir": "dist",
-    "rootDir": "src",
-    "module": "CommonJS",
-    "types": ["node", "jest"],
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"]
-    }
+    "target": "ES2020",
+    "module": "commonjs",  // 或根据需要使用 "ESNext"
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "outDir": "../dist",  // 设置编译后的输出目录
+    "rootDir": "./src"    // 设置源代码根目录
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "src/**/*.ts"         // 确保此路径是正确的
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

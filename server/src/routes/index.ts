@@ -1,22 +1,18 @@
-import { Router } from 'express';
-import authRoutes from './auth.routes';
-import userRoutes from './user.routes';
-import adminRoutes from './admin.routes';
-import gameRoutes from './game.routes';
-import betRoutes from './bet.routes';
-import { authMiddleware } from '../middleware/auth.middleware';
+// src/routes/index.ts
+import express from 'express';
+import betRoutes from './betRoutes';  // 假设你有一个 betRoutes.ts 文件
+import cardRoutes from './userRoutes';  // 假设你有一个 cardRoutes.ts 文件
+import exchangeRoutes from './exchangeRoutes';  // 假设你有一个 exchangeRoutes.ts 文件
+import userRoutes from './userRoutes';  // 假设你有一个 userRoutes.ts 文件
 
-const router = Router();
+const router = express.Router();
 
-// 公开路由
-router.use('/auth', authRoutes);
+// 挂载不同的路由到不同的路径
+router.use('/bets', betRoutes);  // 处理与投注相关的请求
+router.use('/cards', cardRoutes);  // 处理银行卡绑定相关的请求
+router.use('/exchange', exchangeRoutes);  // 处理积分兑换相关的请求
+router.use('/users', userRoutes);  // 处理用户管理相关的请求
 
-// 需要认证的路由
-router.use('/user', authMiddleware.authenticate, userRoutes);
-router.use('/game', authMiddleware.authenticate, gameRoutes);
-router.use('/bet', authMiddleware.authenticate, betRoutes);
+// 可以根据需求添加更多的路由
 
-// 管理员路由
-router.use('/admin', authMiddleware.authenticate, authMiddleware.requireAdmin, adminRoutes);
-
-export default router; 
+export default router;

@@ -1,47 +1,24 @@
-// FILEPATH: d:/ayi/zhangyu-main/client/src/context/ThemeContext.tsx
+import { createContext, useContext, useState, ReactNode } from "react";
 
-import React, { createContext, useContext, useState } from 'react';
-import { ConfigProvider, theme } from 'antd';
+type Theme = "light" | "dark";
 
-type ThemeContextType = {
-  themeMode: 'light' | 'dark';
+interface ThemeContextType {
+  theme: Theme;
   toggleTheme: () => void;
-};
+}
 
-const ThemeContext = createContext<ThemeContextType | null>(null);
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-// 为测试环境提供一个简单版本的 Provider
-export const TestThemeProvider = ({ children }: { children: React.ReactNode }) => {
-  const [themeMode, setThemeMode] = useState<'light' | 'dark'>('light');
+export const ThemeProvider = ({ children }: { children: ReactNode }) => {
+  const [theme, setTheme] = useState<Theme>("light");
 
   const toggleTheme = () => {
-    setThemeMode(prev => prev === 'light' ? 'dark' : 'light');
+    setTheme((prevTheme) => (prevTheme === "light" ? "dark" : "light"));
   };
 
   return (
-    <ThemeContext.Provider value={{ themeMode, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
       {children}
-    </ThemeContext.Provider>
-  );
-};
-
-// 生产环境使用的完整版本
-export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
-  const [themeMode, setThemeMode] = useState<'light' | 'dark'>('light');
-
-  const toggleTheme = () => {
-    setThemeMode(prev => prev === 'light' ? 'dark' : 'light');
-  };
-
-  const themeConfig = {
-    algorithm: themeMode === 'dark' ? theme.darkAlgorithm : theme.defaultAlgorithm,
-  };
-
-  return (
-    <ThemeContext.Provider value={{ themeMode, toggleTheme }}>
-      <ConfigProvider theme={themeConfig}>
-        {children}
-      </ConfigProvider>
     </ThemeContext.Provider>
   );
 };
@@ -49,7 +26,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 export const useTheme = () => {
   const context = useContext(ThemeContext);
   if (!context) {
-    throw new Error('useTheme must be used within a ThemeProvider');
+    throw new Error("useTheme must be used within a ThemeProvider");
   }
   return context;
 };
