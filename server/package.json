@@ -6,7 +6,7 @@
     "build": "tsc",
     "dev": "ts-node-dev --respawn src/index.ts",
     "dependencies": {
-        "@supabase/supabase-js": "^2.49.1",
+        "@supabase/supabase-js": "^2.50.0",
         "bcrypt": "^5.1.1",
         "express": "^4.17.1",
         "pg": "^8.14.1",
